@@ -41,6 +41,7 @@ class KalmanFiltering:
         pe = np.dot(np.dot(self.__r, self.__p), self.__r.T) + self.__v_ksi
         self.__p = np.dot(pe, self.__v) * np.linalg.inv(pe + self.__v)
         xe = np.dot(self.__r, self.__xx[:][self.__observation_number - 1])
-        iteration_result = self.__xx[:][self.__observation_number] = xe + np.dot(np.dot(self.__p, self.__v_inv), (z - xe))
+        iteration_result = self.__xx[:][self.__observation_number] = xe + np.dot(np.dot(self.__p, self.__v_inv),
+                                                                                 (z - xe))
         self.__observation_number += 1
         return self.__p, iteration_result
