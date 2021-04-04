@@ -27,7 +27,7 @@ def calibrate_camera(calibration_image: str = None, calibration_file: str = None
     
     if calibration_file is not None:
         with open(calibration_file, 'r') as f:
-            lines  = f.readlines()
+            lines = f.readlines()
             dist = np.array([float(n) for n in lines[-1].strip().split(separator)])
             tmp_arr = []
             for line in lines[:-1]:
