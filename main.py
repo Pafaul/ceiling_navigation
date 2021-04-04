@@ -1,4 +1,4 @@
-from lsm.least_square_method import seq_lms
+from lsm.least_square_method import seq_lsm
 from sys import argv
 from typing import Any, TypeVar
 import cv2
@@ -88,8 +88,8 @@ def get_camera(config: dict) -> cv2.VideoCapture:
 
 
 def not_main():
-    img1 = cv2.imread('./images/1_2.jpg', 0)
-    img2 = cv2.imread('./images/1_1.jpg', 0)
+    img1 = cv2.imread('./images/2.jpg', 0)
+    img2 = cv2.imread('./images/1.jpg', 0)
     #orb = cv2.ORB_create()
     orb = cv2.SIFT_create(contrastThreshold=0.1)
     #orb = cv2.SIFT_create()
@@ -125,7 +125,7 @@ def not_main():
     R1, R2, t = cv2.decomposeEssentialMat(E)
     retval, R, t, mask = cv2.recoverPose(E, pts1, pts2, camera_matrix, mask=mask)
 
-    X, mask, error_EV, error_DP = seq_lms(pts1, pts2, R)
+    X, mask, error_EV, error_DP = seq_lsm(pts1, pts2, R)
 
 
     pts1 = np.int32(pts1[mask])
@@ -136,7 +136,7 @@ def not_main():
     R1, R2, t = cv2.decomposeEssentialMat(E)
     retval, R, t, mask = cv2.recoverPose(E, pts1, pts2, camera_matrix, mask=mask)
 
-    X, mask, error_EV, error_DP = seq_lms(pts1, pts2, R)
+    X, mask, error_EV, error_DP = seq_lsm(pts1, pts2, R)
 
     angle_x = atan2(R[2][1], R[2][2])
     angle_y = atan2(-R[2][0], (R[2][1]**2 + R[2][2]**2)**0.5)
