@@ -1,13 +1,17 @@
+from lsm.least_square_method import seq_lms
 from sys import argv
 from typing import Any, TypeVar
-from utils.match_keypoints import match_keypoints
-from utils.get_keypoints import get_keypoints_from_image
-from utils.camera_calibration import calibrate_camera
-from utils.get_position_deltas import get_position_deltas
 import cv2
 import numpy as np
 import time
 import configparser
+from math import pi, atan2
+
+from camera_utils.match_keypoints import match_keypoints
+from camera_utils.get_keypoints import get_keypoints_from_image
+from camera_utils.camera_calibration import calibrate_camera
+from camera_utils.get_position_deltas import get_position_deltas
+
 
 InitialStageInfo = TypeVar('InitialStageInfo', np.array, np.array, cv2.VideoCapture)
 MultipleDicts    = TypeVar('MultipleDicts', dict, dict)
@@ -84,8 +88,8 @@ def get_camera(config: dict) -> cv2.VideoCapture:
 
 
 def not_main():
-    img1 = cv2.imread('1_2.jpg', 0)
-    img2 = cv2.imread('1_1.jpg', 0)
+    img1 = cv2.imread('./images/1_2.jpg', 0)
+    img2 = cv2.imread('./images/1_1.jpg', 0)
     #orb = cv2.ORB_create()
     orb = cv2.SIFT_create(contrastThreshold=0.1)
     #orb = cv2.SIFT_create()
@@ -121,12 +125,30 @@ def not_main():
     R1, R2, t = cv2.decomposeEssentialMat(E)
     retval, R, t, mask = cv2.recoverPose(E, pts1, pts2, camera_matrix, mask=mask)
 
+    X, mask, error_EV, error_DP = seq_lms(pts1, pts2, R)
+
+
+    pts1 = np.int32(pts1[mask])
+    pts2 = np.int32(pts2[mask])
+
+    F, mask = cv2.findFundamentalMat(pts1,pts2,cv2.FM_LMEDS)
+    E, mask = cv2.findEssentialMat(pts1, pts2, camera_matrix, method=cv2.RANSAC)
+    R1, R2, t = cv2.decomposeEssentialMat(E)
+    retval, R, t, mask = cv2.recoverPose(E, pts1, pts2, camera_matrix, mask=mask)
+
+    X, mask, error_EV, error_DP = seq_lms(pts1, pts2, R)
+
+    angle_x = atan2(R[2][1], R[2][2])
+    angle_y = atan2(-R[2][0], (R[2][1]**2 + R[2][2]**2)**0.5)
+    angle_z = atan2(R[1][0], R[0][0])
+    toDeg = lambda x: x*180/pi
     delta = time.time() - start_time
-    print(delta)
-    print(F)
-    print(R)
-    print(R2)
-    print(t)
+    print(f'time of execution: {delta}')
+    print(f'delta in pixels: {X}')
+    print(f'KP ok: {mask.count(True)}')
+    print(f'angles:\nox: {toDeg(angle_x)}, oy: {toDeg(angle_y)}, oz: {toDeg(angle_z)}')
+    print(error_EV)
+    print(error_DP)
 
 
 if __name__ == '__main__':
