@@ -84,8 +84,8 @@ def get_camera(config: dict) -> cv2.VideoCapture:
 
 
 def not_main():
-    img1 = cv2.imread('1_1.jpg', 0)
-    img2 = cv2.imread('1_2.jpg', 0)
+    img1 = cv2.imread('1_2.jpg', 0)
+    img2 = cv2.imread('1_1.jpg', 0)
     #orb = cv2.ORB_create()
     orb = cv2.SIFT_create(contrastThreshold=0.1)
     #orb = cv2.SIFT_create()
@@ -117,13 +117,15 @@ def not_main():
         [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]
     ])
 
-    retval, mask = cv2.findEssentialMat(pts1, pts2, camera_matrix, method=cv2.RANSAC)
-    retval, R, t, mask = cv2.recoverPose(retval, pts1, pts2, camera_matrix, mask=mask)
+    E, mask = cv2.findEssentialMat(pts1, pts2, camera_matrix, method=cv2.RANSAC)
+    R1, R2, t = cv2.decomposeEssentialMat(E)
+    retval, R, t, mask = cv2.recoverPose(E, pts1, pts2, camera_matrix, mask=mask)
 
     delta = time.time() - start_time
     print(delta)
     print(F)
     print(R)
+    print(R2)
     print(t)
 
 
