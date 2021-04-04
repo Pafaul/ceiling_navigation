@@ -37,7 +37,9 @@ class KalmanFiltering:
         xx[:][0] = self.__z
         return xx, p
 
-    def __call__(self, z: np.array, **kwargs):
+    def __call__(self, z: np.array, d_noise: np.array, **kwargs):
+        self.__v = np.diag(d_noise)
+        self.__v_inv = np.linalg.inv(self.__v)
         pe = np.dot(np.dot(self.__r, self.__p), self.__r.T) + self.__v_ksi
         self.__p = np.dot(pe, self.__v) * np.linalg.inv(pe + self.__v)
         xe = np.dot(self.__r, self.__xx[:][self.__observation_number - 1])
