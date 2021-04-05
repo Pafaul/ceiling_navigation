@@ -133,21 +133,24 @@ def get_camera(config: dict) -> cv2.VideoCapture:
 
 
 def not_main_seq():
-    img1 = cv2.imread('./images/img_part.jpg', 0)
+    img1 = cv2.imread('./images/1_2.jpg', 0)
     img2 = cv2.imread('./images/1_1.jpg', 0)
     #orb = cv2.ORB_create()
     orb = cv2.SIFT_create(contrastThreshold=0.1)
     #orb = cv2.SIFT_create()
+    # BFMatcher with default params
+    # FLANN_INDEX_KDTREE = 1
+    # index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+    # search_params = dict(checks = 50)
+    # bf = cv2.FlannBasedMatcher(index_params, search_params)
+    bf = cv2.BFMatcher()
 
     kp1, des1 = orb.detectAndCompute(img1, None)
     start_time = time.time()
     kp2, des2 = orb.detectAndCompute(img2, None)
 
-    # BFMatcher with default params
-    FLANN_INDEX_KDTREE = 1
-    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-    search_params = dict(checks = 50)
-    bf = cv2.FlannBasedMatcher(index_params, search_params)
+    
+    
     matches = bf.knnMatch(des1,des2,k=2)
     
     pts1 = []
