@@ -12,6 +12,7 @@ from camera_utils.match_keypoints import match_keypoints
 from camera_utils.get_keypoints import get_keypoints_from_image
 from camera_utils.camera_calibration import calibrate_camera
 from camera_utils.get_position_deltas import get_position_deltas
+from kalman import KalmanFiltering
 
 
 InitialStageInfo = TypeVar('InitialStageInfo', np.array, np.array, cv2.VideoCapture)
