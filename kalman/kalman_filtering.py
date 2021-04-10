@@ -130,7 +130,8 @@ class KalmanFiltering:
         self.__filter.Q = Q_discrete_white_noise(dim=len(self.__x),
                                                  dt=time_step,
                                                  var=self.__process_noise,
-                                                 block_size=6)
+                                                 block_size=6,
+                                                 order_by_dim=False)
 
         self.__filter.predict()
         self.__filter.update(z)
