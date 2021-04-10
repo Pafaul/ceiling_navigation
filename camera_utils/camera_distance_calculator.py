@@ -10,6 +10,6 @@ class CameraDistanceCalculator:
         self.__py = py
 
     def calculate_dist(self, px: int, py: int) -> list:
-        lx = self.__h*tan(self.__alphaX/2)
-        ly = self.__h*tan(self.__alphaY/2)
+        lx = self.__h*tan(self.__alphaX/2)*2
+        ly = self.__h*tan(self.__alphaY/2)*2
         return [px/self.__px*lx, py/self.__py*ly]
