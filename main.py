@@ -40,7 +40,7 @@ error_descriptions = [
 FRAMES_NAVIGATION = 1
 GLOBAL_MAP_NAVIGATION = 2
 init_x = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-dim_z = len(measurments_descriptions)
+dim_z = len(init_x)
 p_x = np.array([0.5, 0.5, 0.5, 1, 1, 1, 0.16, 0.16, 0.16, 0.01, 0.01, 0.01])
 r_x = np.array([100, 100, 100, 20, 20, 20, 0.16, 0.16, 0.16, 0.01, 0.01, 0.01])
 
