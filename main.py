@@ -39,10 +39,15 @@ error_descriptions = [
 
 FRAMES_NAVIGATION = 1
 GLOBAL_MAP_NAVIGATION = 2
+init_x = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+dim_z = len(measurments_descriptions)
+p_x = np.array([0.5, 0.5, 0.5, 1, 1, 1, 0.16, 0.16, 0.16, 0.01, 0.01, 0.01])
+r_x = np.array([100, 100, 100, 20, 20, 20, 0.16, 0.16, 0.16, 0.01, 0.01, 0.01])
 
 def main():
     filename = argv[1]
     config, debug = get_config(filename)
+
     camera_matrix, dist, camera, camera_distance_calculator = initial_stage(config)
     descriptor, matcher = initialize_algorithms(config)
 
@@ -55,6 +60,11 @@ def main():
     errors = []
     delta_time = []
     current_method = FRAMES_NAVIGATION
+
+    fk = KalmanFiltering(x=init_x,
+                         dim_z=dim_z,
+                         p_x=p_x,
+                         r_x=r_x)
 
     if debug['dbg_mode']:
         current_time = 0
@@ -78,11 +88,13 @@ def main():
 
             if tmp_kp_previous is not None and tmp_kp_current is not None:
                 if current_method == FRAMES_NAVIGATION:
-                    tmp_pts_current, tmp_pts_previous = match_keypoints(tmp_kp_current, tmp_des_current, tmp_kp_previous, tmp_des_previous, matcher)
+                    tmp_pts_current, tmp_pts_previous = match_keypoints(tmp_kp_current, tmp_des_current, tmp_kp_previous,
+                                                                    tmp_des_previous, matcher)
                     current_measures, measures_error = get_position_deltas(tmp_pts_previous, tmp_pts_current, camera_matrix)
                     if len(current_measures) == 0:
                         continue
                     current_measures[6] = dt
+                    fk(deltas=current_measures)
                     Z.append(current_measures.copy())
                     errors.append(measures_error.copy())
                     i += 1
@@ -90,7 +102,6 @@ def main():
 
                 else:
                     tmp_pts_current, global_pts = match_keypoints(tmp_kp_current, tmp_des_current, global_pts, global_des, matcher)
-
 
             tmp_kp_previous = tmp_kp_current.copy()
             tmp_des_previous = tmp_des_current.copy()
@@ -109,7 +120,7 @@ def main():
             plt.ylabel(error_descriptions[index])
             plt.show()
 
-        
+        fk.show()
 
 
 def not_main_seq():
