@@ -1,3 +1,4 @@
+from math import acos
 import numpy as np
 import cv2
 
@@ -16,8 +17,15 @@ def get_coordinated_from_global_map(gm_kp, gm_des, img_kp, img_des, matcher, img
     pts2 = np.float32(pts2)
 
     M, mask = cv2.findHomography(pts1, pts2, cv2.RANSAC,5.0)
-    matchesMask = mask.ravel().tolist()
     h,w = img_shape
     pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
     dst = cv2.perspectiveTransform(pts,M)
+
+    print(dst)
+
+    alpha = 0
+    for point in zip(pts, dst):
+        alpha += acos(0)
+
+    alpha /= 4.0
     return dst

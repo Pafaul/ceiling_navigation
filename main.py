@@ -26,6 +26,7 @@ measurments_descriptions = [
     "angle Z",
     "dt"
 ]
+
 error_descriptions = [
     "D_X",
     "D_Y",
@@ -103,10 +104,12 @@ def main():
             plt.show()
 
         for index in range(7):
-            plt.plot([t for t in range(len(Z))], [y[index] for y in errors])
+            plt.plot([t for t in range(len(errors))], [y[index] for y in errors])
             plt.xlabel('Номер шага')
             plt.ylabel(error_descriptions[index])
             plt.show()
+
+        
 
 
 def not_main_seq():
@@ -188,7 +191,7 @@ def not_main_map():
     pts1 = []
     pts2 = []
     for i, (m, n) in enumerate(matches):
-        if m.distance < 0.8 * n.distance:
+        if m.distance < 0.7 * n.distance:
             pts2.append(kp2[m.trainIdx].pt)
             pts1.append(kp1[m.queryIdx].pt)
 
@@ -210,6 +213,11 @@ def not_main_map():
     print(f'angles:\noz: {toDeg(atan2(-X[1], X[0]))}')
     print(error_EV)
     print(error_DP)
+
+    print(sum([kp.pt[0] for kp in kp1])/len(kp1)+X[2])
+    print(sum([kp.pt[1] for kp in kp1])/len(kp1)+X[3])
+
+
 
     img1 = cv2.imread('./images/1_1.jpg', 0)
     img2 = cv2.imread('./images/img_part.jpg', 0)
@@ -240,6 +248,7 @@ def not_main_map():
     # print(dst)
 
     dst = get_coordinated_from_global_map(kp1, des1, kp2, des2, bf, img2.shape)
+    
 
     # X, mask, error_EV, error_DP = map_lsm(pts1, pts2)
 
