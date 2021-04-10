@@ -68,7 +68,7 @@ def main():
             cv2.waitKey(1)
             dt = time.time() - start_time
             if not res or tmp_img_current is None or len(tmp_img_current) == 0:
-                print('Cannot get image from camera')   
+                print('Cannot get image from camera')
                 time.sleep(0.1)
                 continue
 
@@ -112,9 +112,9 @@ def main():
 def not_main_seq():
     img1 = cv2.imread('./images/1_2.jpg', 0)
     img2 = cv2.imread('./images/1_1.jpg', 0)
-    #orb = cv2.ORB_create()
+    # orb = cv2.ORB_create()
     orb = cv2.SIFT_create(contrastThreshold=0.1)
-    #orb = cv2.SIFT_create()
+    # orb = cv2.SIFT_create()
     # BFMatcher with default params
     # FLANN_INDEX_KDTREE = 1
     # index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
@@ -126,20 +126,18 @@ def not_main_seq():
     start_time = time.time()
     kp2, des2 = orb.detectAndCompute(img2, None)
 
-    
-    
-    matches = bf.knnMatch(des1,des2,k=2)
-    
+    matches = bf.knnMatch(des1, des2, k=2)
+
     pts1 = []
     pts2 = []
-    for i,(m,n) in enumerate(matches):
-        if m.distance < 0.8*n.distance:
+    for i, (m, n) in enumerate(matches):
+        if m.distance < 0.8 * n.distance:
             pts2.append(kp2[m.trainIdx].pt)
             pts1.append(kp1[m.queryIdx].pt)
 
     pts1 = np.int32(pts1)
     pts2 = np.int32(pts2)
-    
+
     camera_matrix = np.array([
         [2.20577589e+03, 0.00000000e+00, 4.01509158e+02],
         [0.00000000e+00, 2.73065460e+03, 3.01560236e+02],
@@ -160,9 +158,9 @@ def not_main_seq():
     X, mask, error_EV, error_DP = seq_lsm(pts1, pts2, R)
 
     angle_x = atan2(R[2][1], R[2][2])
-    angle_y = atan2(-R[2][0], (R[2][1]**2 + R[2][2]**2)**0.5)
+    angle_y = atan2(-R[2][0], (R[2][1] ** 2 + R[2][2] ** 2) ** 0.5)
     angle_z = atan2(R[1][0], R[0][0])
-    toDeg = lambda x: x*180/pi
+    toDeg = lambda x: x * 180 / pi
     delta = time.time() - start_time
     print(f'time of execution: {delta}')
     print(f'delta in pixels: {X}')
@@ -171,26 +169,26 @@ def not_main_seq():
     print(error_EV)
     print(error_DP)
 
+
 def not_main_map():
     img1 = cv2.imread('./images/1_1.jpg', 0)
     img2 = cv2.imread('./images/img_part.jpg', 0)
-    #orb = cv2.ORB_create()
+    # orb = cv2.ORB_create()
     orb = cv2.SIFT_create(contrastThreshold=0.1)
-    #orb = cv2.SIFT_create()
+    # orb = cv2.SIFT_create()
 
-    
     kp1, des1 = orb.detectAndCompute(img1, None)
     start_time = time.time()
     kp2, des2 = orb.detectAndCompute(img2, None)
 
     # BFMatcher with default params
     bf = cv2.BFMatcher()
-    matches = bf.knnMatch(des1,des2,k=2)
-    
+    matches = bf.knnMatch(des1, des2, k=2)
+
     pts1 = []
     pts2 = []
-    for i,(m,n) in enumerate(matches):
-        if m.distance < 0.8*n.distance:
+    for i, (m, n) in enumerate(matches):
+        if m.distance < 0.8 * n.distance:
             pts2.append(kp2[m.trainIdx].pt)
             pts1.append(kp1[m.queryIdx].pt)
 
@@ -205,7 +203,7 @@ def not_main_map():
     X, mask, error_EV, error_DP = map_lsm(pts1, pts2)
 
     delta = time.time() - start_time
-    toDeg = lambda x: x*180/pi
+    toDeg = lambda x: x * 180 / pi
     print(f'time of execution: {delta}')
     print(f'delta in pixels: {X[2:]}')
     print(f'KP ok: {mask.count(True)}')
