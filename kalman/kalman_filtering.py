@@ -92,15 +92,15 @@ class KalmanFiltering:
         return np.array([self.__filtered_state[-1][0] + deltas[0],
                          self.__filtered_state[-1][1] + deltas[1],
                          self.__filtered_state[-1][2] + deltas[2],
+                         deltas[0] / deltas[-1],
+                         deltas[1] / deltas[-1],
+                         deltas[2] / deltas[-1],
+                         self.__filtered_state[-1][6] + deltas[3],
+                         self.__filtered_state[-1][7] + deltas[4],
+                         self.__filtered_state[-1][8] + deltas[5],
                          deltas[3] / deltas[-1],
                          deltas[4] / deltas[-1],
-                         deltas[5] / deltas[-1],
-                         self.__filtered_state[-1][6] + deltas[6],
-                         self.__filtered_state[-1][7] + deltas[7],
-                         self.__filtered_state[-1][8] + deltas[8],
-                         deltas[9] / deltas[-1],
-                         deltas[10] / deltas[-1],
-                         deltas[11] / deltas[-1]]), deltas[-1]
+                         deltas[5] / deltas[-1]]), deltas[-1]
 
     def __call__(self, deltas: np.array) -> Tuple[np.array, np.array]:
         """
@@ -127,7 +127,10 @@ class KalmanFiltering:
                                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
                                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
 
-        self.__filter.Q = Q_discrete_white_noise(dim=len(self.__x), dt=time_step, var=self.__process_noise)
+        self.__filter.Q = Q_discrete_white_noise(dim=len(self.__x),
+                                                 dt=time_step,
+                                                 var=self.__process_noise,
+                                                 block_size=6)
 
         self.__filter.predict()
         self.__filter.update(z)
