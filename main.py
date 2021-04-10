@@ -1,4 +1,5 @@
 
+from camera_utils.get_coordinates_from_global_map import get_coordinated_from_global_map
 import time
 from utils.init_functions import get_config, initial_stage, initialize_algorithms
 import cv2
@@ -171,7 +172,7 @@ def not_main_seq():
     print(error_DP)
 
 def not_main_map():
-    img1 = cv2.imread('./images/1.jpg', 0)
+    img1 = cv2.imread('./images/1_1.jpg', 0)
     img2 = cv2.imread('./images/img_part.jpg', 0)
     #orb = cv2.ORB_create()
     orb = cv2.SIFT_create(contrastThreshold=0.1)
@@ -212,6 +213,55 @@ def not_main_map():
     print(error_EV)
     print(error_DP)
 
+    img1 = cv2.imread('./images/1_1.jpg', 0)
+    img2 = cv2.imread('./images/img_part.jpg', 0)
+
+    kp1, des1 = orb.detectAndCompute(img1, None)
+    start_time = time.time()
+    kp2, des2 = orb.detectAndCompute(img2, None)
+
+    # BFMatcher with default params
+    bf = cv2.BFMatcher()
+    # matches = bf.knnMatch(des1,des2,k=2)
+    
+    # pts1 = []
+    # pts2 = []
+    # for i,(m,n) in enumerate(matches):
+    #     if m.distance < 0.7*n.distance:
+    #         pts1.append(kp1[m.queryIdx].pt)
+    #         pts2.append(kp2[m.trainIdx].pt)
+
+    # pts1 = np.float32(pts1)
+    # pts2 = np.float32(pts2)
+
+    # M, mask = cv2.findHomography(pts2, pts1, cv2.RANSAC,5.0)
+    # matchesMask = mask.ravel().tolist()
+    # h,w = img2.shape
+    # pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+    # dst = cv2.perspectiveTransform(pts,M)
+    # print(dst)
+
+    dst = get_coordinated_from_global_map(kp1, des1, kp2, des2, bf, img2.shape)
+
+    # X, mask, error_EV, error_DP = map_lsm(pts1, pts2)
+
+    # pts1 = np.int32(pts1[mask])
+    # pts2 = np.int32(pts2[mask])
+
+    # X, mask, error_EV, error_DP = map_lsm(pts1, pts2)
+
+    delta = time.time() - start_time
+    img1 = cv2.polylines(img1,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+    cv2.imshow('res', img1)
+    cv2.waitKey(0)
+    toDeg = lambda x: x*180/pi
+    print(f'time of execution: {delta}')
+    # print(f'delta in pixels: {X[2:]}')
+    # print(f'KP ok: {mask.count(True)}')
+    # print(f'angles:\noz: {toDeg(atan2(-X[1], X[0]))}')
+    # print(error_EV)
+    # print(error_DP)
+
 if __name__ == '__main__':
-    not_main_seq()
+    not_main_map()
     #main()
