@@ -35,6 +35,8 @@ error_descriptions = [
     "D_T"
 ]
 
+FRAMES_NAVIGATION = 1
+GLOBAL_MAP_NAVIGATION = 2
 
 def main():
     filename = argv[1]
@@ -45,10 +47,12 @@ def main():
     tmp_img_current = None
     tmp_des_current, tmp_des_previous = None, None
     tmp_kp_current, tmp_kp_previous = None, None
+    global_pts, global_des = None, None
 
     Z = []
     errors = []
     delta_time = []
+    current_method = FRAMES_NAVIGATION
 
     if debug['dbg_mode']:
         current_time = 0
@@ -71,15 +75,20 @@ def main():
             tmp_kp_current, tmp_des_current = get_keypoints_from_image(tmp_img_current, descriptor)
 
             if tmp_kp_previous is not None and tmp_kp_current is not None:
-                tmp_pts_current, tmp_pts_previous = match_keypoints(tmp_kp_current, tmp_des_current, tmp_kp_previous, tmp_des_previous, matcher)
-                current_measures, measures_error = get_position_deltas(tmp_pts_previous, tmp_pts_current, camera_matrix)
-                if len(current_measures) == 0:
-                    continue
-                current_measures[6] = dt
-                Z.append(current_measures.copy())
-                errors.append(measures_error.copy())
-                i += 1
-                print(f'Image: {i}')
+                if current_method == FRAMES_NAVIGATION:
+                    tmp_pts_current, tmp_pts_previous = match_keypoints(tmp_kp_current, tmp_des_current, tmp_kp_previous, tmp_des_previous, matcher)
+                    current_measures, measures_error = get_position_deltas(tmp_pts_previous, tmp_pts_current, camera_matrix)
+                    if len(current_measures) == 0:
+                        continue
+                    current_measures[6] = dt
+                    Z.append(current_measures.copy())
+                    errors.append(measures_error.copy())
+                    i += 1
+                    print(f'Image: {i}')
+
+                else:
+                    tmp_pts_current, global_pts = match_keypoints(tmp_kp_current, tmp_des_current, global_pts, global_des, matcher)
+
 
             tmp_kp_previous = tmp_kp_current.copy()
             tmp_des_previous = tmp_des_current.copy()
