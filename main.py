@@ -110,7 +110,7 @@ def main():
             plt.ylabel(error_descriptions[index])
             plt.show()
 
-        fk.show()
+    fk.show()
 
 
 def not_main_seq():
