@@ -1,23 +1,20 @@
-from lsm.least_square_method import map_lsm, seq_lsm
-from sys import argv
-from typing import Any, TypeVar
-import cv2
-import numpy as np
+
 import time
-import configparser
+from utils.init_functions import get_config, initial_stage, initialize_algorithms
+import cv2
+
 from math import pi, atan2
+from sys import argv
+
+import numpy as np
 import matplotlib.pyplot as plt
 
 from camera_utils.match_keypoints import match_keypoints
 from camera_utils.get_keypoints import get_keypoints_from_image
-from camera_utils.camera_calibration import calibrate_camera
 from camera_utils.get_position_deltas import get_position_deltas
+from lsm.least_square_method import map_lsm, seq_lsm
+
 from kalman import KalmanFiltering
-
-
-InitialStageInfo = TypeVar('InitialStageInfo', np.array, np.array, cv2.VideoCapture)
-MultipleDicts    = TypeVar('MultipleDicts', dict, dict)
-MultipleArrays   = TypeVar('MultipleArrays', np.array, np.array)
 
 measurments_descriptions = [
     "X",
@@ -42,7 +39,7 @@ error_descriptions = [
 def main():
     filename = argv[1]
     config, debug = get_config(filename)
-    camera_matrix, dist, camera = initial_stage(config)
+    camera_matrix, dist, camera, camera_distance_calculator = initial_stage(config)
     descriptor, matcher = initialize_algorithms(config)
 
     tmp_img_current = None
@@ -100,37 +97,6 @@ def main():
             plt.xlabel('Номер шага')
             plt.ylabel(error_descriptions[index])
             plt.show()
-        
-
-
-def get_config(filename: str) -> MultipleDicts:
-    config = configparser.ConfigParser()
-    config.read(filename)
-    return config, config['debug']
-
-def initial_stage(config: dict) -> InitialStageInfo:
-    mtx, dist = get_camera_matrix(config['camera_matrix'])
-    camera = get_camera(config['camera'])
-    return [mtx, dist, camera]
-
-def initialize_algorithms(config: dict) -> Any:
-    FLANN_INDEX_KDTREE = 1
-    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-    search_params = dict(checks = 50)
-    return cv2.SIFT_create(contrastThreshold=0.1), cv2.FlannBasedMatcher(index_params, search_params)
-
-def get_camera_matrix(config: dict) -> list[np.array]:
-    if config['calibration_image'] != '':
-        return calibrate_camera(calibration_image=config['calibration_image'])
-    else:
-        return calibrate_camera(calibration_file=config['calibration_file'])
-
-def get_camera(config: dict) -> cv2.VideoCapture:
-    if config['source'] != '':
-        camera = cv2.VideoCapture(config['source'])
-        return camera
-    else:
-        raise Exception('Video source is not specified')
 
 
 def not_main_seq():
