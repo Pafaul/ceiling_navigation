@@ -34,10 +34,16 @@ error_descriptions = [
     "D_T"
 ]
 
+init_x = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+dim_z = len(measurments_descriptions)
+p_x = np.array([0.5, 0.5, 0.5, 1, 1, 1, 0.16, 0.16, 0.16, 0.01, 0.01, 0.01])
+r_x = np.array([100, 100, 100, 20, 20, 20, 0.16, 0.16, 0.16, 0.01, 0.01, 0.01])
+
 
 def main():
     filename = argv[1]
     config, debug = get_config(filename)
+
     camera_matrix, dist, camera, camera_distance_calculator = initial_stage(config)
     descriptor, matcher = initialize_algorithms(config)
 
@@ -48,6 +54,11 @@ def main():
     Z = []
     errors = []
     delta_time = []
+
+    fk = KalmanFiltering(x=init_x,
+                         dim_z=dim_z,
+                         p_x=p_x,
+                         r_x=r_x)
 
     if debug['dbg_mode']:
         current_time = 0
@@ -76,6 +87,7 @@ def main():
                 if len(current_measures) == 0:
                     continue
                 current_measures[6] = dt
+                fk(deltas=current_measures)
                 Z.append(current_measures.copy())
                 errors.append(measures_error.copy())
                 i += 1
@@ -97,6 +109,8 @@ def main():
             plt.xlabel('Номер шага')
             plt.ylabel(error_descriptions[index])
             plt.show()
+
+        fk.show()
 
 
 def not_main_seq():
