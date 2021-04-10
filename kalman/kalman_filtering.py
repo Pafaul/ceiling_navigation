@@ -32,6 +32,21 @@ class KalmanFiltering:
         self.__dim_z = dim_z
         self.__filter = kalman.KalmanFilter(dim_x=len(self.__x),
                                             dim_z=self.__dim_z)
+
+        self.__descriptions = [
+            "X",
+            "Y",
+            "Z",
+            "VX",
+            "VY",
+            "VZ",
+            "alpha",
+            "beta",
+            "gamma",
+            "wx",
+            "wy",
+            "wz"
+        ]
         # Хранилище векторов оценок состояния
         self.__filtered_state = list()
         # Хранилище квадратов ошибок оценки состояния
@@ -143,7 +158,7 @@ class KalmanFiltering:
     def show(self):
         for i in range(len(self.__x)):
             plt.title("Kalman filter")
-            plt.plot(self.__z_history[:][i], label=f"Измерение {i}", color="#99AAFF")
-            plt.plot(self.__filtered_state[:][i], label=f"Оценка фильтра {i}", color="#224411")
+            plt.plot([x[i] for x in self.__z_history], label=f"Измерение {self.__descriptions[i]}", color="#99AAFF")
+            plt.plot([x[i] for x in self.__filtered_state], label=f"Оценка фильтра {self.__descriptions[i]}", color="#224411")
             plt.legend()
             plt.show()

@@ -41,7 +41,9 @@ def get_camera_matrix(config: dict) -> list[np.array]:
 
 def get_camera(config: dict) -> cv2.VideoCapture:
     if config['source'] != '':
-        camera = cv2.VideoCapture(config['source'])
+        source = config['source']
+        source = int(source) if source.isdigit() else source
+        camera = cv2.VideoCapture(source)
         return camera
     else:
         raise Exception('Video source is not specified')

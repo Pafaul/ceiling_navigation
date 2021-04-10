@@ -15,7 +15,7 @@ imgpoints = [] # 2d points in image plane.
 
 images = ['template_1.jpg']
 
-cap = cv2.VideoCapture('http://172.16.0.212:8080/video')
+cap = cv2.VideoCapture(0) #'http://172.16.0.212:8080/video')
 captured = 0
 required = 100
 mtx_collection = []
@@ -27,7 +27,7 @@ while True:
     res, img = cap.read()
 
     cv2.imshow('cap', img)
-    cv2.waitKey(10)
+    cv2.waitKey(1)
 
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 

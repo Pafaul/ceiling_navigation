@@ -34,6 +34,9 @@ def get_position_deltas(pts1: np.array, pts2: np.array, camera_matrix: np.array,
         if 'angle_threshold' in config:
             angles = [angle if abs(angle) > config['angle_threshold'] else 0 for angle in angles]
         
+        if 'dist_threshold' in config:
+            dists = [dist if abs(dist) > config['dist_threshold'] else 0 for dist in X[0:3]]
+
         X = np.append(X, angles)
         X = np.append(X, [0]) # for delta t
         error_DP = np.append(error_DP, [0, 0, 0, 0]) # for angles and delta t
