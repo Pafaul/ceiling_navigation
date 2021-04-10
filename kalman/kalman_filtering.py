@@ -4,6 +4,10 @@ from filterpy.common import Q_discrete_white_noise
 from typing import Tuple, List
 
 
+class VectorSizeMismatch(Exception):
+    pass
+
+
 class KalmanFiltering:
     def __init__(self, x: np.array,
                  dim_z: int,
@@ -74,7 +78,10 @@ class KalmanFiltering:
         :return: Кортеж вида (Последняя оценка вектора состояния, ковариационная матрица ошибок этой оценки).
         """
 
-        # Пересчитаем ковариационную матрицу ошибки модели, т.к шаг времени мог измениться
+        if len(z) != self.__dim_z:
+            raise VectorSizeMismatch(f"Передан вектор длиной {len(z)}, "
+                                     f"ожидается {self.__dim_z}")
+
         self.__filter.Q = Q_discrete_white_noise(dim=len(self.__x), dt=time_step, var=self.__process_noise)
 
         self.__filter.predict()
