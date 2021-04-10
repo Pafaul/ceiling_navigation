@@ -108,17 +108,17 @@ def main():
             delta_time.append(dt)
             current_time += dt
 
-        for index in range(7):
-            plt.plot([t for t in range(len(Z))], [y[index] for y in Z])
-            plt.xlabel('Номер шага')
-            plt.ylabel(measurments_descriptions[index])
-            plt.show()
+        # for index in range(7):
+        #     plt.plot([t for t in range(len(Z))], [y[index] for y in Z])
+        #     plt.xlabel('Номер шага')
+        #     plt.ylabel(measurments_descriptions[index])
+        #     plt.show()
 
-        for index in range(7):
-            plt.plot([t for t in range(len(errors))], [y[index] for y in errors])
-            plt.xlabel('Номер шага')
-            plt.ylabel(error_descriptions[index])
-            plt.show()
+        # for index in range(7):
+        #     plt.plot([t for t in range(len(errors))], [y[index] for y in errors])
+        #     plt.xlabel('Номер шага')
+        #     plt.ylabel(error_descriptions[index])
+        #     plt.show()
 
     fk.show()
 
@@ -281,5 +281,5 @@ def not_main_map():
     # print(error_DP)
 
 if __name__ == '__main__':
-    not_main_map()
-    #main()
+    #not_main_map()
+    main()

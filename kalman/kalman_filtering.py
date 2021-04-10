@@ -127,7 +127,7 @@ class KalmanFiltering:
                                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
                                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
 
-        self.__filter.Q = Q_discrete_white_noise(dim=len(self.__x),
+        self.__filter.Q = Q_discrete_white_noise(dim=2,
                                                  dt=time_step,
                                                  var=self.__process_noise,
                                                  block_size=6,
@@ -143,7 +143,7 @@ class KalmanFiltering:
     def show(self):
         for i in range(len(self.__x)):
             plt.title("Kalman filter")
-            plt.plot(self.z_history[:, 0], label=f"Измерение {i}", color="#99AAFF")
-            plt.plot(self.filtered_state[:, 0], label=f"Оценка фильтра {i}", color="#224411")
+            plt.plot(self.__z_history[:][i], label=f"Измерение {i}", color="#99AAFF")
+            plt.plot(self.__filtered_state[:][i], label=f"Оценка фильтра {i}", color="#224411")
             plt.legend()
             plt.show()
