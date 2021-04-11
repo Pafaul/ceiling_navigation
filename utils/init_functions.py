@@ -1,3 +1,5 @@
+from kalman.kalman_filtering import KalmanFiltering
+from filterpy.kalman.kalman_filter import KalmanFilter
 import numpy as np
 import configparser
 import cv2
@@ -47,3 +49,13 @@ def get_camera(config: dict) -> cv2.VideoCapture:
         return camera
     else:
         raise Exception('Video source is not specified')
+
+def initialize_kalman_filter(x, dim_z, p_x, r_x):
+    return KalmanFiltering(x=x, dim_z=dim_z, p_x=p_x, r_x=r_x)
+
+def get_thresholds(config):
+    threshold_config = dict(config['vector_thresholds'])
+    threshold_config['angle_threshold'] = float(threshold_config['angle_threshold'])
+    threshold_config['dist_threshold'] = float(threshold_config['dist_threshold'])
+    threshold_config['matcher_threshold'] = int(threshold_config['matcher_threshold'])
+    return threshold_config

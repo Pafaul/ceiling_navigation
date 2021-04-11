@@ -1,10 +1,10 @@
 
-from camera_utils.get_coordinates_from_global_map import get_coordinated_from_global_map
+from position_calculation.get_coordinates_from_global_map import get_coordinates_from_global_map
 import time
-from utils.init_functions import get_config, initial_stage, initialize_algorithms
+from utils.init_functions import get_config, get_thresholds, initial_stage, initialize_algorithms, initialize_kalman_filter
 import cv2
 
-from math import pi, atan2
+from math import acos, pi, atan2, sqrt
 from sys import argv
 
 import numpy as np
@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 from camera_utils.match_keypoints import match_keypoints
 from camera_utils.get_keypoints import get_keypoints_from_image
-from camera_utils.get_position_deltas import get_position_deltas
+from position_calculation.get_position_deltas import get_position_deltas
 from lsm.least_square_method import map_lsm, seq_lsm
 
 from kalman import KalmanFiltering
@@ -42,7 +42,7 @@ GLOBAL_MAP_NAVIGATION = 2
 init_x = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 dim_z = len(init_x)
 p_x = np.array([0.5, 0.5, 0.5, 1, 1, 1, 0.16, 0.16, 0.16, 0.01, 0.01, 0.01])
-r_x = np.array([150, 150, 150, 50, 50, 50, 0.5, 0.5, 0.5, 0.05, 0.05, 0.05])
+r_x = np.array([50, 50, 50, 10, 10, 10, 0.5, 0.5, 0.5, 0.05, 0.05, 0.05])
 
 def main():
     filename = argv[1]
@@ -50,6 +50,8 @@ def main():
 
     camera_matrix, dist, camera, camera_distance_calculator = initial_stage(config)
     descriptor, matcher = initialize_algorithms(config)
+    fk = initialize_kalman_filter(init_x, dim_z, p_x, r_x)
+    threshold_config = get_thresholds(config)
 
     tmp_img_current = None
     tmp_des_current, tmp_des_previous = None, None
@@ -60,17 +62,7 @@ def main():
     errors = []
     delta_time = []
     current_method = FRAMES_NAVIGATION
-
-    threshold_config = dict(config['vector_thresholds'])
-    threshold_config['angle_threshold'] = float(threshold_config['angle_threshold'])
-    threshold_config['dist_threshold'] = float(threshold_config['dist_threshold'])
-    threshold_config['matcher_threshold'] = int(threshold_config['matcher_threshold'])
-
-    fk = KalmanFiltering(x=init_x,
-                         dim_z=dim_z,
-                         p_x=p_x,
-                         r_x=r_x)
-
+    
     if debug['dbg_mode']:
         current_time = 0
         finish_time = float(debug['time_to_run'])
@@ -193,53 +185,63 @@ def not_main_seq():
 
 
 def not_main_map():
-    img1 = cv2.imread('./images/1_1.jpg', 0)
-    img2 = cv2.imread('./images/img_part.jpg', 0)
+    img1 = cv2.imread('./images/big_image.jpg', 0)
+    img2 = cv2.imread('./images/little_image.jpg', 0)
     # orb = cv2.ORB_create()
     orb = cv2.SIFT_create(contrastThreshold=0.1)
     # orb = cv2.SIFT_create()
 
-    kp1, des1 = orb.detectAndCompute(img1, None)
-    start_time = time.time()
-    kp2, des2 = orb.detectAndCompute(img2, None)
-
     # BFMatcher with default params
     bf = cv2.BFMatcher()
-    matches = bf.knnMatch(des1, des2, k=2)
+    # BFMatcher with default params
+    FLANN_INDEX_KDTREE = 1
+    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+    search_params = dict(checks = 50)
+    bf = cv2.FlannBasedMatcher(index_params, search_params)
 
-    pts1 = []
-    pts2 = []
-    for i, (m, n) in enumerate(matches):
-        if m.distance < 0.7 * n.distance:
-            pts2.append(kp2[m.trainIdx].pt)
-            pts1.append(kp1[m.queryIdx].pt)
+    # kp1, des1 = orb.detectAndCompute(img1, None)
+    # print(len(kp1))
+    # start_time = time.time()
+    # kp2, des2 = orb.detectAndCompute(img2, None)
 
-    pts1 = np.int32(pts1)
-    pts2 = np.int32(pts2)
+    
+    # matches = bf.knnMatch(des1, des2, k=2)
 
-    X, mask, error_EV, error_DP = map_lsm(pts1, pts2)
+    # pts1 = []
+    # pts2 = []
+    # for i, (m, n) in enumerate(matches):
+    #     if m.distance < 0.7 * n.distance:
+    #         pts2.append(kp2[m.trainIdx].pt)
+    #         pts1.append(kp1[m.queryIdx].pt)
 
-    pts1 = np.int32(pts1[mask])
-    pts2 = np.int32(pts2[mask])
+    # pts1 = np.int32(pts1)
+    # pts2 = np.int32(pts2)
 
-    X, mask, error_EV, error_DP = map_lsm(pts1, pts2)
+    # X, mask, error_EV, error_DP = map_lsm(pts1, pts2, dist_threshold=100)
 
-    delta = time.time() - start_time
-    toDeg = lambda x: x * 180 / pi
-    print(f'time of execution: {delta}')
-    print(f'delta in pixels: {X[2:]}')
-    print(f'KP ok: {mask.count(True)}')
-    print(f'angles:\noz: {toDeg(atan2(-X[1], X[0]))}')
-    print(error_EV)
-    print(error_DP)
+    # # pts1 = np.int32(pts1[mask])
+    # # pts2 = np.int32(pts2[mask])
 
-    print(sum([kp.pt[0] for kp in kp1])/len(kp1)+X[2])
-    print(sum([kp.pt[1] for kp in kp1])/len(kp1)+X[3])
+    # # X, mask, error_EV, error_DP = map_lsm(pts1, pts2, dist_threshold=100)
+
+    # delta = time.time() - start_time
+    # toDeg = lambda x: x * 180 / pi
+    # print(f'time of execution: {delta}')
+    # print(f'delta in pixels: {X[2:]}')
+    # print(f'KP ok: {mask.count(True)}')
+    # print(f'angles:\noz: {toDeg(atan2(-X[1], X[0]))}')
+    # print(error_EV)
+    # print(error_DP)
+
+    # print(sum([kp.pt[0] for kp in kp1])/len(kp1)+X[2])
+    # print(sum([kp.pt[1] for kp in kp1])/len(kp1)+X[3])
+
+    # print(sum([kp.pt[0] for kp in kp2])/len(kp2))
+    # print(sum([kp.pt[1] for kp in kp2])/len(kp2))
 
 
-
-    img1 = cv2.imread('./images/1_1.jpg', 0)
-    img2 = cv2.imread('./images/img_part.jpg', 0)
+    img1 = cv2.imread('./images/big_image.jpg', 0)
+    img2 = cv2.imread('./images/little_image_2.png', 0)
 
     kp1, des1 = orb.detectAndCompute(img1, None)
     start_time = time.time()
@@ -266,7 +268,7 @@ def not_main_map():
     # dst = cv2.perspectiveTransform(pts,M)
     # print(dst)
 
-    dst = get_coordinated_from_global_map(kp1, des1, kp2, des2, bf, img2.shape)
+    dst = get_coordinates_from_global_map(kp1, des1, kp2, des2, bf, img2.shape)
     
 
     # X, mask, error_EV, error_DP = map_lsm(pts1, pts2)
@@ -277,11 +279,27 @@ def not_main_map():
     # X, mask, error_EV, error_DP = map_lsm(pts1, pts2)
 
     delta = time.time() - start_time
-    img1 = cv2.polylines(img1,[np.int32(dst)],True,255,3, cv2.LINE_AA)
-    cv2.imshow('res', img1)
-    cv2.waitKey(0)
+    img1 = cv2.polylines(img1,[np.int32(dst)],True,255,10, cv2.LINE_AA)
+    #cv2.imshow('res', img1)
+    #cv2.waitKey(0)
     toDeg = lambda x: x*180/pi
     print(f'time of execution: {delta}')
+    cv2.imwrite('res.png', img1)
+    x, y = 0, 0
+    for p in dst: 
+        x += p[0][0]
+        y += p[0][1]
+    x /= len(dst)
+    y /= len(dst)
+    print(x, y)
+    h,w = img2.shape
+    pt1 = dst[0][0]
+    pt2 = dst[1][0]
+    x = pt2[0]-pt1[0]
+    y = pt2[1]-pt1[1]
+    alpha = acos(h*y/(h*sqrt(x**2+y**2)))
+    print(alpha)
+        
     # print(f'delta in pixels: {X[2:]}')
     # print(f'KP ok: {mask.count(True)}')
     # print(f'angles:\noz: {toDeg(atan2(-X[1], X[0]))}')
@@ -289,5 +307,5 @@ def not_main_map():
     # print(error_DP)
 
 if __name__ == '__main__':
-    #not_main_map()
+    # not_main_map()
     main()
