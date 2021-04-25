@@ -213,27 +213,12 @@ def depickle_kp(file_kp, file_des):
     return kp1, des1
     
 
-def not_main_map():
-    img1 = cv2.imread('./images/big_image.jpg', 0)
-    img2 = cv2.imread('./images/little_image.jpg', 0)
-    orb = cv2.SIFT_create(contrastThreshold=0.1)
-
-    # BFMatcher with default params
-    bf = cv2.BFMatcher()
-    # BFMatcher with default params
-    FLANN_INDEX_KDTREE = 1
-    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-    search_params = dict(checks = 50)
-    bf = cv2.FlannBasedMatcher(index_params, search_params)
-
-    img1 = cv2.imread('./images/big_image.jpg', 0)
+def not_main_map(kp1, des1, orb, bf):
+#    img1 = cv2.imread('./images/big_image.jpg', 0)
     img2 = cv2.imread('./images/little_image_2.png', 0)
 
-    kp1, des1 = depickle_kp('big_img_kp', 'big_img_des')
     start_time = time.time()
     kp2, des2 = orb.detectAndCompute(img2, None)
-    print(type(kp2), type(des2))
-    print(des2.shape)
 
     # BFMatcher with default params
     bf = cv2.BFMatcher()
@@ -241,11 +226,11 @@ def not_main_map():
     dst = get_coordinates_from_global_map(kp1, des1, kp2, des2, bf, img2.shape)
 
     delta = time.time() - start_time
-    img1 = cv2.polylines(img1,[np.int32(dst)],True,255,10, cv2.LINE_AA)
+    # img1 = cv2.polylines(img1,[np.int32(dst)],True,255,10, cv2.LINE_AA)
     
     toDeg = lambda x: x*180/pi
     print(f'time of execution: {delta}')
-    cv2.imwrite('res.png', img1)
+    # cv2.imwrite('res.png', img1)
     x, y = 0, 0
     for p in dst: 
         x += p[0][0]
@@ -260,8 +245,21 @@ def not_main_map():
     y = pt2[1]-pt1[1]
     alpha = acos(h*y/(h*sqrt(x**2+y**2)))
     print(alpha)
+    return delta
 
 
 if __name__ == '__main__':
-    not_main_map()
+    kp1, des1 = depickle_kp('big_img_kp', 'big_img_des')
+
+    orb = cv2.SIFT_create(contrastThreshold=0.1)
+
+    # BFMatcher with default params
+    bf = cv2.BFMatcher()
+
+    dt = []
+    for i in range(100):
+        dt.append(not_main_map(kp1, des1, orb, bf))
+    print(f'mean: {sum(dt)/len(dt)}')
+    print(f'min: {min(dt)}')
+    print(f'max: {max(dt)}')
     # main()
