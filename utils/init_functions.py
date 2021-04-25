@@ -42,6 +42,11 @@ def get_camera_matrix(config: dict):
         return calibrate_camera(calibration_file=config['calibration_file'])
 
 def get_camera(config: dict) -> cv2.VideoCapture:
+    if config['source'] == 'rpi':
+        from picamera import PiCamera
+        camera = PiCamera(resolution = 'HD', framerate=60, sensor_mode=6)
+        return camera
+
     if config['source'] != '':
         source = config['source']
         source = int(source) if source.isdigit() else source

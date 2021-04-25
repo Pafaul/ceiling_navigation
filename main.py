@@ -17,6 +17,8 @@ from lsm.least_square_method import map_lsm, seq_lsm
 
 from kalman import KalmanFiltering
 
+from picamera.Array import PiRGBArray
+
 measurments_descriptions = [
     "X",
     "Y",
@@ -69,16 +71,15 @@ def main():
         start_time = time.time()
 
         i = 0
-        while i < finish_time:
-            res, tmp_img_current = camera.read()
+        rawCapture = PiRGBArray(camera, size=(1280,720))
+        for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=True):
+            if (i > finish_time):
+                break
+            tmp_img_current = frame.array
             tmp_img_current = cv2.cvtColor(tmp_img_current, cv2.COLOR_BGR2GRAY)
             cv2.imshow('cap', tmp_img_current)
             cv2.waitKey(1)
             dt = time.time() - start_time
-            if not res or tmp_img_current is None or len(tmp_img_current) == 0:
-                print('Cannot get image from camera')
-                time.sleep(0.1)
-                continue
 
             start_time = time.time()
             tmp_kp_current, tmp_des_current = get_keypoints_from_image(tmp_img_current, descriptor)
@@ -89,9 +90,11 @@ def main():
                                                                     tmp_des_previous, matcher)
                     if (len(tmp_pts_current)) < threshold_config['matcher_threshold']:
                         print('Not enough matches')
+                        rawCapture.truncate(0)
                         continue
                     current_measures, measures_error = get_position_deltas(tmp_pts_previous, tmp_pts_current, camera_matrix, config=threshold_config)
                     if len(current_measures) == 0:
+                        rawCapture.truncate(0)
                         continue
                     current_measures[6] = dt
                     fk(deltas=current_measures)
@@ -107,6 +110,8 @@ def main():
                 tmp_des_previous = tmp_des_current.copy()
                 delta_time.append(dt)
                 current_time += dt
+            rawCapture.truncate(0)
+            
 
         # for index in range(7):
         #     plt.plot([t for t in range(len(Z))], [y[index] for y in Z])

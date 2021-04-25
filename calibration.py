@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
-import glob
+import picamera
+from picamera.array import PiRGBArray
 
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -15,7 +16,8 @@ imgpoints = [] # 2d points in image plane.
 
 images = ['template_1.jpg']
 
-cap = cv2.VideoCapture(0) #'http://172.16.0.212:8080/video')
+cap = picamera.PiCamera(resolution=(1280,720), framerate=60, sensor_mode=6)
+# cap = cv2.VideoCapture(0) #'http://172.16.0.212:8080/video')
 captured = 0
 required = 100
 mtx_collection = []
@@ -23,9 +25,11 @@ dist_collection = []
 
 images = []
 
-while True:
-    res, img = cap.read()
 
+rawCapture = PiRGBArray(cap, size=(1280,720))
+for frame in cap.capture_continuous(rawCapture, format='bgr', use_video_port=True):
+
+    img = cv2.cvtColor(frame.array, cv2.COLOR_BGR2GRAY)
     cv2.imshow('cap', img)
     cv2.waitKey(1)
 
@@ -55,7 +59,7 @@ for gray in images:
     # Draw and display the corners
     img = cv2.drawChessboardCorners(img, (7,6), corners2,ret)
     cv2.imshow('chess',img)
-    cv2.waitKey(1)
+    cv2.waitKey(10)
 
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
     mtx_collection.append(mtx)
