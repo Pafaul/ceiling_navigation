@@ -3,6 +3,7 @@ from filterpy import kalman
 from filterpy.common import Q_discrete_white_noise
 from typing import Tuple, List
 import matplotlib.pyplot as plt
+import math
 
 
 class VectorSizeMismatch(Exception):
@@ -156,9 +157,18 @@ class KalmanFiltering:
         return self.__filtered_state[-1], self.__covariance_history[-1]
 
     def show(self):
-        for i in range(len(self.__x)):
+        rtd = lambda x: x*180/math.pi
+        for i in range(6):
             plt.title("Kalman filter")
             plt.plot([x[i] for x in self.__z_history], label=f"Измерение {self.__descriptions[i]}", color="#99AAFF")
             plt.plot([x[i] for x in self.__filtered_state], label=f"Оценка фильтра {self.__descriptions[i]}", color="#224411")
             plt.legend()
             plt.show()
+
+        for i in range(6, 12):
+            plt.title("Kalman filter")
+            plt.plot([rtd(x[i]) for x in self.__z_history], label=f"Измерение {self.__descriptions[i]}", color="#99AAFF")
+            plt.plot([rtd(x[i]) for x in self.__filtered_state], label=f"Оценка фильтра {self.__descriptions[i]}", color="#224411")
+            plt.legend()
+            plt.show()
+        

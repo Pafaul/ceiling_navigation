@@ -17,7 +17,7 @@ from lsm.least_square_method import map_lsm, seq_lsm
 
 from kalman import KalmanFiltering
 
-from picamera.Array import PiRGBArray
+from picamera.array import PiRGBArray
 
 measurments_descriptions = [
     "X",
@@ -77,12 +77,14 @@ def main():
                 break
             tmp_img_current = frame.array
             tmp_img_current = cv2.cvtColor(tmp_img_current, cv2.COLOR_BGR2GRAY)
-            cv2.imshow('cap', tmp_img_current)
-            cv2.waitKey(1)
             dt = time.time() - start_time
 
             start_time = time.time()
             tmp_kp_current, tmp_des_current = get_keypoints_from_image(tmp_img_current, descriptor)
+            tmp_kp_img = None
+            tmp_kp_img = cv2.drawKeypoints(tmp_img_current, tmp_kp_current, tmp_kp_img)
+            cv2.imshow('cap', tmp_kp_img)
+            cv2.waitKey(1)
 
             if tmp_kp_previous is not None and tmp_kp_current is not None:
                 if current_method == FRAMES_NAVIGATION:
@@ -113,11 +115,11 @@ def main():
             rawCapture.truncate(0)
             
 
-        # for index in range(7):
-        #     plt.plot([t for t in range(len(Z))], [y[index] for y in Z])
-        #     plt.xlabel('Номер шага')
-        #     plt.ylabel(measurments_descriptions[index])
-        #     plt.show()
+        for index in range(6,7):
+            plt.plot([t for t in range(len(Z))], [y[index] for y in Z])
+            plt.xlabel('Номер шага')
+            plt.ylabel(measurments_descriptions[index])
+            plt.show()
 
         # for index in range(7):
         #     plt.plot([t for t in range(len(errors))], [y[index] for y in errors])

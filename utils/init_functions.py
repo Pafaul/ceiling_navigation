@@ -33,7 +33,7 @@ def initialize_algorithms(config: dict) -> Any:
     index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
     search_params = dict(checks = 50)
     fbm = cv2.FlannBasedMatcher(index_params, search_params)
-    return cv2.SIFT_create(contrastThreshold=0.1), cv2.BFMatcher()
+    return cv2.ORB_create(), cv2.BFMatcher()
 
 def get_camera_matrix(config: dict):
     if config['calibration_image'] != '':
