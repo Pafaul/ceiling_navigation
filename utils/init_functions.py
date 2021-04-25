@@ -35,7 +35,7 @@ def initialize_algorithms(config: dict) -> Any:
     fbm = cv2.FlannBasedMatcher(index_params, search_params)
     return cv2.SIFT_create(contrastThreshold=0.1), cv2.BFMatcher()
 
-def get_camera_matrix(config: dict) -> list[np.array]:
+def get_camera_matrix(config: dict):
     if config['calibration_image'] != '':
         return calibrate_camera(calibration_image=config['calibration_image'])
     else:
