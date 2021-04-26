@@ -111,6 +111,8 @@ def main():
                 tmp_des_previous = tmp_des_current.copy()
                 delta_time.append(dt)
                 current_time += dt
+    
+            rawCapture.truncate(0)
             
             
 
@@ -249,17 +251,17 @@ def not_main_map(kp1, des1, orb, bf):
 
 
 if __name__ == '__main__':
-    kp1, des1 = depickle_kp('big_img_kp', 'big_img_des')
+    # kp1, des1 = depickle_kp('big_img_kp', 'big_img_des')
 
-    orb = cv2.SIFT_create(contrastThreshold=0.1)
+    # orb = cv2.SIFT_create(contrastThreshold=0.1)
 
     # BFMatcher with default params
-    bf = cv2.BFMatcher()
+    # bf = cv2.BFMatcher()
 
-    dt = []
-    for i in range(100):
-        dt.append(not_main_map(kp1, des1, orb, bf))
-    print(f'mean: {sum(dt)/len(dt)}')
-    print(f'min: {min(dt)}')
-    print(f'max: {max(dt)}')
-    # main()
+    # dt = []
+    # for i in range(100):
+    #     dt.append(not_main_map(kp1, des1, orb, bf))
+    # print(f'mean: {sum(dt)/len(dt)}')
+    # print(f'min: {min(dt)}')
+    # print(f'max: {max(dt)}')
+    main()
