@@ -82,6 +82,10 @@ def main():
             tmp_kp_current, tmp_des_current = get_keypoints_from_image(tmp_img_current, descriptor)
             tmp_kp_img = None
             tmp_kp_img = cv2.drawKeypoints(tmp_img_current, tmp_kp_current, tmp_kp_img)
+            if (i == 10):
+                cv2.imwrite('img1.png', tmp_kp_img)
+            if (i == 11):
+                cv2.imwrite('img2.png', tmp_kp_img)
             cv2.imshow('cap', tmp_kp_img)
             cv2.waitKey(1)
 
