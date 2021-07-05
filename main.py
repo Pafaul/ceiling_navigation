@@ -280,8 +280,8 @@ def not_main_map():
 
     delta = time.time() - start_time
     img1 = cv2.polylines(img1,[np.int32(dst)],True,255,10, cv2.LINE_AA)
-    #cv2.imshow('res', img1)
-    #cv2.waitKey(0)
+    cv2.imshow('res', img1)
+    cv2.waitKey(0)
     toDeg = lambda x: x*180/pi
     print(f'time of execution: {delta}')
     cv2.imwrite('res.png', img1)
@@ -307,5 +307,5 @@ def not_main_map():
     # print(error_DP)
 
 if __name__ == '__main__':
-    # not_main_map()
-    main()
+    not_main_map()
+    # main()
