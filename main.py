@@ -1,7 +1,7 @@
 
 from position_calculation.get_coordinates_from_global_map import get_coordinates_from_global_map
 import time
-from utils.init_functions import get_config, get_thresholds, initial_stage, initialize_algorithms, initialize_kalman_filter
+from visual_utils.init_functions import get_config, get_thresholds, initial_stage, initialize_algorithms, initialize_kalman_filter
 import cv2
 
 from math import acos, pi, atan2, sqrt
@@ -70,10 +70,12 @@ def main():
 
         i = 0
         while i < finish_time:
+            # TODO: rewrite code for obtaining images
             res, tmp_img_current = camera.read()
             tmp_img_current = cv2.cvtColor(tmp_img_current, cv2.COLOR_BGR2GRAY)
             cv2.imshow('cap', tmp_img_current)
             cv2.waitKey(1)
+            # TODO: rewrite code for time calculation
             dt = time.time() - start_time
             if not res or tmp_img_current is None or len(tmp_img_current) == 0:
                 print('Cannot get image from camera')
@@ -83,17 +85,24 @@ def main():
             start_time = time.time()
             tmp_kp_current, tmp_des_current = get_keypoints_from_image(tmp_img_current, descriptor)
 
+            # TODO: rewrite code for skipping frame
             if tmp_kp_previous is not None and tmp_kp_current is not None:
                 if current_method == FRAMES_NAVIGATION:
-                    tmp_pts_current, tmp_pts_previous = match_keypoints(tmp_kp_current, tmp_des_current, tmp_kp_previous,
-                                                                    tmp_des_previous, matcher)
+                    tmp_pts_current, tmp_pts_previous = match_keypoints(tmp_kp_current, tmp_des_current,
+                                                                        tmp_kp_previous, tmp_des_previous, matcher)
                     if (len(tmp_pts_current)) < threshold_config['matcher_threshold']:
                         print('Not enough matches')
                         continue
-                    current_measures, measures_error = get_position_deltas(tmp_pts_previous, tmp_pts_current, camera_matrix, config=threshold_config)
+
+                    # TODO: check recoverPose function
+                    current_measures, measures_error = get_position_deltas(tmp_pts_previous, tmp_pts_current,
+                                                                           camera_matrix, config=threshold_config)
+
                     if len(current_measures) == 0:
                         continue
                     current_measures[6] = dt
+
+                    # TODO: remove Kalman filter
                     fk(deltas=current_measures)
                     Z.append(current_measures.copy())
                     errors.append(measures_error.copy())
@@ -123,6 +132,7 @@ def main():
     fk.show()
 
 
+# TODO: break up in functions
 def not_main_seq():
     img1 = cv2.imread('./images/1_2.jpg', 0)
     img2 = cv2.imread('./images/1_1.jpg', 0)
@@ -184,6 +194,7 @@ def not_main_seq():
     print(error_DP)
 
 
+# TODO: break up in functions
 def not_main_map():
     img1 = cv2.imread('./images/big_image.jpg', 0)
     img2 = cv2.imread('./images/little_image.jpg', 0)
@@ -307,5 +318,5 @@ def not_main_map():
     # print(error_DP)
 
 if __name__ == '__main__':
-    not_main_map()
+    not_main_seq()
     # main()

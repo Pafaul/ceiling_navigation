@@ -10,7 +10,7 @@ def get_coordinates_from_global_map(gm_kp, gm_des, img_kp, img_des, matcher, img
     :param gm_des: descriptors of keypoints extracted from map
     :param img_kp: keypoints extracted from current frame
     :param img_des: descriptors of keypoints extracted from current frame
-    :param matcher: matcher algorithm to use (currently - BF/CNN)
+    :param matcher: matcher algorithm to use (currently - BF/KNN)
     :param img_shape: image resolution
     :param required_matches: good matches required for algorithm
     :return:

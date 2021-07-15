@@ -3,6 +3,8 @@ from math import tan, floor, ceil
 import numpy as np
 from numpy import sign
 
+from algorithm_tests.camera import Camera
+
 
 def generate_keypoints(bottom_left_point: np.ndarray, top_left_point: np.ndarray,
                        top_right_point: np.ndarray, bottom_right_point: np.ndarray,
@@ -27,9 +29,9 @@ def generate_keypoints(bottom_left_point: np.ndarray, top_left_point: np.ndarray
 
     # calculating line parameters
     k1 = (top_right_point[1] - bottom_left_point[1])/(top_right_point[0] - bottom_left_point[0])
-    b1 = bottom_left_point[1]
+    b1 = bottom_left_point[1] - k1*bottom_left_point[0]
     k2 = (bottom_right_point[1] - top_left_point[1])/(bottom_right_point[0] - top_left_point[0])
-    b2 = top_left_point[1]
+    b2 = top_left_point[1] - k2*top_left_point[0]
 
     # calculating generation parameters
     keypoints_per_line = ceil(keypoint_amount/2)
@@ -58,6 +60,31 @@ def generate_keypoints(bottom_left_point: np.ndarray, top_left_point: np.ndarray
     return result_keypoints
 
 
+def generate_keypoints_equal(bottom_left_point: np.ndarray, top_right_point: np.ndarray,
+                             x_keypoint_amount: int = 10, y_keypoint_amount: int = 10):
+    """
+    Generate keypoints equal spread through image
+    :param bottom_left_point:
+    :param top_right_point:
+    :param x_keypoint_amount:
+    :param y_keypoint_amount:
+    :return:
+    """
+    x_delta = (top_right_point[0] - bottom_left_point[0])/(x_keypoint_amount+1)
+    y_delta = (top_right_point[1] - bottom_left_point[1])/(y_keypoint_amount+1)
+    keypoints = []
+    for x_index in range(0, x_keypoint_amount):
+        for y_index in range(0, y_keypoint_amount):
+            tmp = np.ndarray([3, 1], dtype='int32')
+
+            tmp[0] = int(bottom_left_point[0] + (x_index + 1./2) * x_delta)
+            tmp[1] = int(bottom_left_point[1] + (y_index + 1./2) * y_delta)
+            tmp[2] = int(0)
+
+            keypoints.append(tmp)
+    return keypoints
+
+
 def transform_keypoints(initial_3d_keypoints: list, rotation_matrix: np.ndarray,
                         displacement_vector: np.ndarray) -> list:
     """
@@ -70,13 +97,12 @@ def transform_keypoints(initial_3d_keypoints: list, rotation_matrix: np.ndarray,
     """
     transformed_keypoints = []
     for kp in initial_3d_keypoints:
-        transformed_keypoints.append(rotation_matrix.dot(kp) + displacement_vector)
+        transformed_keypoints.append(np.dot(rotation_matrix, kp) + displacement_vector)
 
     return transformed_keypoints
 
 
-def calculate_2d_from_3d(keypoints_3d: list, camera_3d_position: np.ndarray,
-                         alpha: float, beta: float, resolution: list) -> list:
+def calculate_2d_from_3d(keypoints_3d: list, camera: Camera) -> list:
     """
     Algorithm of converting 3D to 2D:
     1. check if point is in camera perspective
@@ -84,10 +110,7 @@ def calculate_2d_from_3d(keypoints_3d: list, camera_3d_position: np.ndarray,
     3. calculate coordinates in camera reference frame
     4. point's coordinate quantization
     :param keypoints_3d: list of keypoints in 3D space
-    :param camera_3d_position: camera position in 3D space [X, Y, Z]
-    :param alpha: camera's AOV along X axis
-    :param beta: camera's AOV along Y axis
-    :param resolution: camera's image resolution
+    :param camera: camera object containing parameters required for calculation
     :return:
     """
 
@@ -102,8 +125,8 @@ def calculate_2d_from_3d(keypoints_3d: list, camera_3d_position: np.ndarray,
         :param point: point in 3D space
         :return:
         """
-        tmp = point - camera_3d_position
-        tmp[2] = camera_3d_position[2] - point[2]
+        tmp = point - camera.position
+        tmp[2] = camera.position[2] - point[2]
         return tmp
 
     def is_in_camera_perspective(point: np.ndarray) -> bool:
@@ -116,8 +139,8 @@ def calculate_2d_from_3d(keypoints_3d: list, camera_3d_position: np.ndarray,
         :param point:
         :return:
         """
-        max_delta_x = point[2]*tan(alpha/2)
-        max_delta_y = point[2]*tan(beta/2)
+        max_delta_x = point[2]*tan(camera.aov[0]/2)
+        max_delta_y = point[2]*tan(camera.aov[1]/2)
         return (point[2] > 0) and (abs(point[0]) < max_delta_x) and (abs(point[1]) < max_delta_y)
 
     def project_point_to_surface(point: np.ndarray) -> np.ndarray:
@@ -130,8 +153,8 @@ def calculate_2d_from_3d(keypoints_3d: list, camera_3d_position: np.ndarray,
         :return:
         """
         tmp = np.ndarray([2, 1])
-        tmp[0] = (camera_3d_position[2] - point[2]) * tan(point[0]/point[2]) * sign(point[0]) + point[0]
-        tmp[1] = (camera_3d_position[2] - point[2]) * tan(point[1]/point[2]) * sign(point[1]) + point[1]
+        tmp[0] = (camera.position[2] - point[2]) * tan(point[0]/point[2]) * sign(point[0]) + point[0]
+        tmp[1] = (camera.position[2] - point[2]) * tan(point[1]/point[2]) * sign(point[1]) + point[1]
         return tmp
 
     def coordinate_quantization(point: np.ndarray) -> np.ndarray:
@@ -154,15 +177,12 @@ def calculate_2d_from_3d(keypoints_3d: list, camera_3d_position: np.ndarray,
         :return:
         """
         tmp = np.ndarray([2, 1])
-        pixel_resolution_x = camera_3d_position[2]*tan(alpha/2)/resolution[0]/2
-        pixel_resolution_y = camera_3d_position[2]*tan(beta/2)/resolution[1]/2
+        pixel_resolution_x = camera.position[2]*tan(camera.aov[0]/2)/camera.resolution[0]/2
+        pixel_resolution_y = camera.position[2]*tan(camera.aov[1]/2)/camera.resolution[1]/2
         tmp[0] = floor(point[0] / pixel_resolution_x)
         tmp[1] = floor(point[1] / pixel_resolution_y)
-        tmp[0], tmp[1] = - tmp[1] + resolution[0] / 2, -tmp[0] + resolution[1] / 2
+        tmp[0], tmp[1] = - tmp[1] + camera.resolution[0] / 2, -tmp[0] + camera.resolution[1] / 2
         return tmp
-
-    pixels_x_axis = 2*camera_3d_position[2]*tan(alpha/2)/resolution[0]
-    pixels_y_axis = 2*camera_3d_position[2]*tan(beta/2)/resolution[1]
 
     mask = []
     keypoints_2d = []

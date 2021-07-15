@@ -34,6 +34,8 @@ def seq_lsm(pts1, pts2, rotation_matrix, dist_threshold=35):
     :param dist_threshold: threshold for Z coordinate
     :return:
     """
+    # TODO: what the heck is going on here????
+    # TODO: probably rewrite
     emissions = []
     emissions_count = 0
     A = []
@@ -84,13 +86,14 @@ def seq_lsm(pts1, pts2, rotation_matrix, dist_threshold=35):
 def seq_lsm_init_matrixes(pts1, pts2, rotation_matrix, emissions):
     A = []
     B = []
-    for pt1, pt2 in zip(pts1[emissions], pts2[emissions]):
-        tmp1 = np.ones((3, 1));
-        tmp1[0] = pt1[0];
+    for pt1, pt2 in zip([pts1[index] for index in range(len(emissions)) if emissions[index]],
+                        [pts2[index] for index in range(len(emissions)) if emissions[index]]):
+        tmp1 = np.ones((3, 1))
+        tmp1[0] = pt1[0]
         tmp1[1] = pt1[1]
         tmp1 = np.dot(rotation_matrix, tmp1)
-        tmp2 = np.ones((3, 1));
-        tmp2[0] = pt2[0];
+        tmp2 = np.ones((3, 1))
+        tmp2[0] = pt2[0]
         tmp2[1] = pt2[1]
 
         for i in range(3):

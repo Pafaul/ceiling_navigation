@@ -4,8 +4,11 @@ from lsm.least_square_method import seq_lsm
 import cv2
 import numpy as np
 
+
 # TODO: rewrite this module
 def get_position_deltas(pts1: np.array, pts2: np.array, camera_matrix: np.array, config={}):
+    # TODO: what the heck is going on here????
+    # TODO: probably rewrite
     try:
         E, mask = cv2.findEssentialMat(pts1, pts2, camera_matrix, method=cv2.RANSAC)
         retval, R, t, mask = cv2.recoverPose(E, pts1, pts2, camera_matrix, mask=mask)

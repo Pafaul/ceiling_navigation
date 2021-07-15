@@ -9,7 +9,7 @@ def match_keypoints(kp_1, des_1, kp_2, des_2, matcher):
     :param des_1: descriptors of the first image keypoints
     :param kp_2: keypoints of the second image
     :param des_2: descriptors of the second image keypoints
-    :param matcher: algorithm used for keypoint matching (currently: BF/CNN)
+    :param matcher: algorithm used for keypoint matching (currently: BF/KNN)
     :return: matched keypoints
     """
     matches = matcher.knnMatch(des_1, des_2, k=2)
