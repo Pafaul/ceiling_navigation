@@ -23,6 +23,9 @@ class DefaultOpticalFlow:
     def draw_optical_flow(self, image: np.ndarray, result_dict: dict):
         raise NotImplementedError()
 
+    def filter_optical_flow(self, result_dict: dict):
+        raise NotImplementedError()
+
 
 class CorrelationOpticalFlow(DefaultOpticalFlow):
     def __init__(self):
@@ -64,17 +67,61 @@ class CorrelationOpticalFlow(DefaultOpticalFlow):
                 offsets.append(offset)
         return_value = dict()
         return_value['number_of_blocks'] = [x_blocks, y_blocks]
+        return_value['block_size'] = block_size
         return_value['search_window_size'] = [search_window_size_x, search_window_size_y]
         return_value['offsets'] = offsets
         return return_value
 
     def draw_optical_flow(self, image: np.ndarray, result_dict: dict):
+        number_of_blocks = result_dict['number_of_blocks']
+        search_window_size = result_dict['search_window_size']
+        block_size = result_dict['block_size']
+        offsets = result_dict['offsets']
+        for x_block_number in range(0, number_of_blocks[0]):
+            for y_block_number in range(0, number_of_blocks[1]):
+                x_block_center = math.floor((x_block_number + 0.5)*block_size[0] + search_window_size[0])
+                y_block_center = math.floor((y_block_number + 0.5)*block_size[1] + search_window_size[1])
+                delta = list(offsets[x_block_number + y_block_number * number_of_blocks[0]])
+                if delta[0] != -1:
+                    delta[0] -= search_window_size[0]
+                    delta[1] -= search_window_size[1]
+                else:
+                    delta[0] = 0
+                    delta[1] = 0
+
+                cv2.line(
+                    image,
+                    (x_block_center, y_block_center),
+                    (x_block_center + delta[0], y_block_center + delta[1]),
+                    (0,),
+                    thickness=2,
+                    lineType=cv2.LINE_8
+                )
+
+        return image
+
+    def filter_optical_flow(self, result_dict: dict):
+        number_of_blocks = result_dict['number_of_blocks']
+        offsets = result_dict['offsets']
+        for x_block_number in range(1, number_of_blocks[0]-1):
+            for y_block_number in range(1, number_of_blocks[1]-1):
+                delta = list(offsets[x_block_number + y_block_number * number_of_blocks[0]])
+                points = []
+                points.append(list(offsets[x_block_number + (y_block_number - 1) * number_of_blocks[0]]))
+                points.append(list(offsets[x_block_number + (y_block_number + 1) * number_of_blocks[0]]))
+                points.append(list(offsets[x_block_number - 1 + y_block_number * number_of_blocks[0]]))
+                points.append(list(offsets[x_block_number + 1 + y_block_number * number_of_blocks[0]]))
+                vector_part = ((delta[0]**2 + delta[1]**2)**0.5)/3
+                x_delta = sum([abs(p[0] - delta[0]) for p in points])
+                y_delta = sum([abs(p[1] - delta[1]) for p in points])
+                if x_delta >= vector_part and y_delta >= vector_part:
+                    result_dict['offsets'][x_block_number + y_block_number * number_of_blocks[0]] = (-1, -1)
         pass
 
     def __find_maximum_cv2(self, image_part: np.ndarray, template: np.ndarray, template_size: list) -> list:
         res = cv2.matchTemplate(image_part, template, cv2.TM_CCORR_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        return max_loc
+        return max_loc if max_val >= 0.45 else [-1, -1]
 
     def __find_maximum(self, image_part: np.ndarray, template: np.ndarray, template_size: list) -> list:
         """

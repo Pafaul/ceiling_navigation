@@ -26,7 +26,7 @@ class Camera:
         self.pixels_per_meter[0] = self.resolution[0] / (2 * self.position[2] * tan(self.aov[0] / 2))
         self.pixels_per_meter[1] = self.resolution[1] / (2 * self.position[2] * tan(self.aov[1] / 2))
 
-    def get_current_optical_axis(self, rotation_matrix: np.ndarray) -> list:
+    def get_current_optical_axis(self, rotation_matrix: np.ndarray, project: bool = True) -> list:
         """
         Project camera center to plane
         1. Get plane equation
@@ -36,13 +36,25 @@ class Camera:
         :param rotation_matrix:
         :return:
         """
-        optical_axis = rotation_matrix.dot(-self.position)
-        optical_axis += self.position
-        optical_axis *= (self.position[2] + optical_axis[2])/(self.position[2])
+        # optical_axis = np.zeros([3, 1])
+        # optical_axis[2] = -self.position[2]
+        # optical_axis = rotation_matrix.dot(optical_axis)
+        # optical_axis += self.position
+        # optical_axis = rotation_matrix.dot(-self.position)
+        # optical_axis += self.position
+        optical_axis = self.position.copy()
+        optical_axis[2] = 0
+        v1 = np.zeros([3, 1])
+        v1[2] = -self.position[2]
+        v2 = rotation_matrix.dot(v1)
+        delta = v2 - v1
+        optical_axis += delta
+        if project:
+            optical_axis *= (self.position[2] + optical_axis[2])/(self.position[2])
 
         return optical_axis
 
-    def get_camera_fov_in_real_coordinates(self, rotation_matrix: np.ndarray, project: bool = True) -> list:
+    def get_camera_fov_in_real_coordinates(self, rotation_matrix: np.ndarray, project: bool = True, project_camera_axis: bool = True) -> list:
         points = [np.zeros([3, 1]) for _ in range(4)]
         meters = [
             self.resolution[0] / self.pixels_per_meter[0] / 2,
@@ -60,7 +72,7 @@ class Camera:
 
         result_points = []
 
-        current_image_center_position = self.get_current_optical_axis(rotation_matrix)
+        current_image_center_position = self.get_current_optical_axis(rotation_matrix, project=project_camera_axis)
 
         for p in points:
             if project:
@@ -247,7 +259,7 @@ class Camera:
         :return:
         """
 
-        camera_fov = self.get_camera_fov_in_real_coordinates(rotation_matrix, project=False)
+        camera_fov = self.get_camera_fov_in_real_coordinates(rotation_matrix, project=False, project_camera_axis=False)
         plane_parameters = self.get_plane_equation(camera_fov[1], camera_fov[0], camera_fov[2])
         mask = []
         result_keypoints = []
@@ -262,4 +274,6 @@ class Camera:
                 mask.append(False)
 
         return [result_keypoints, mask]
+
+
 

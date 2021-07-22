@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from math import pi, atan
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from numpy import sin
 
 from algorithm_tests.camera import Camera
@@ -35,8 +36,8 @@ def main():
     camera_position[2] = 300
     camera = Camera([600, 600], 1, [deg_to_rad(60), deg_to_rad(60)], camera_position.copy())
 
-    bottom_left_generation_corner = [-300, -300]
-    height, width = 600, 600
+    bottom_left_generation_corner = [-1200, -1200]
+    height, width = 2400, 2400
     kp1 = np.ndarray([3, 1])
     kp1[0] = bottom_left_generation_corner[0]
     kp1[1] = bottom_left_generation_corner[1]
@@ -54,71 +55,65 @@ def main():
     kp4[1] = bottom_left_generation_corner[1]
     kp4[2] = 0
 
-    boundaries = [kp1, kp3]
+    boundaries = [kp1 * 2, kp3 * 2]
 
     camera_matrix = np.array([
-        [2000, 0.00000000e+00, 300],
-        [0.00000000e+00, 2000, 300],
+        [1000, 0.00000000e+00, 300],
+        [0.00000000e+00, 1000, 300],
         [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]
     ])
 
-    generated_keypoints = generate_keypoints_equal(kp1, kp3, x_keypoint_amount=16, y_keypoint_amount=20)
-    # generated_keypoints = generate_keypoints(kp1, kp2, kp3, kp4, keypoint_amount=150)
-    # generated_keypoints = [np.zeros([3, 1])]
+    generated_keypoints = generate_keypoints_equal(kp1, kp3, x_keypoint_amount=60, y_keypoint_amount=60)
+
     zero_rotation_matrix = calculate_rotation_matrix(0, 0, 0)
     real_angles = []
     calculated_angles_1 = []
     calculated_angles_2 = []
 
     keypoint_previous = []
-    keypoints_current = []
+    mask_previous = []
+    keypoint_current = []
+    mask_current = []
 
     x = np.linspace(0, pi*6, 100, endpoint=False)
-    y = sin(x)
+    y_1 = sin(x[:-1])*10
+    y_2 = sin(x[1:])*10
+    displacement_vector = np.ndarray([3, 1])
+    displacement_vector[0] = 0
+    displacement_vector[1] = 0
+    displacement_vector[2] = 0
+    result_rotation_matrix = np.eye(3)
+    result_angles = []
+    [keypoint_previous, mask_previous] = camera.calculate_keypoint_projections_to_plane(
+        generated_keypoints,
+        zero_rotation_matrix
+    )
 
-    for angle in np.linspace(0, 10, 100, endpoint=False):
-        camera.position = camera_position.copy()
-        displacement_vector = np.ndarray([3, 1])
-        displacement_vector[0] = 0
-        displacement_vector[1] = 0
-        displacement_vector[2] = 0
+    total_angle_real = [0]
+    total_angle_calc = [0]
+    angle_index = 0
 
-        rotation_matrix = calculate_rotation_matrix_from_euler_angles(deg_to_rad(0), deg_to_rad(0), deg_to_rad(angle))
-
-        camera.update_parameters()
-        img_not_moving = visualize_not_moving_coordinates(boundaries)
-        img_not_moving = visualize_keypoints(img_not_moving, generated_keypoints, boundaries, cv2.MARKER_CROSS)
-        img_not_moving = visualize_camera_fov(img_not_moving,
-                                              camera.get_camera_fov_in_real_coordinates(zero_rotation_matrix),
-                                              boundaries, (0,))
+    for angle_1, angle_2 in zip(y_1, y_2):
+        angle = -(angle_2 - angle_1)
+        total_angle_real.append(total_angle_real[-1] + angle)
         camera.position += displacement_vector
         camera.update_parameters()
-        img_not_moving = visualize_camera_fov(img_not_moving,
-                                              camera.get_camera_fov_in_real_coordinates(rotation_matrix), boundaries,
-                                              (255,))
 
-        cv2.imshow('stationary', img_not_moving)
+        rotation_matrix = calculate_rotation_matrix_from_euler_angles(deg_to_rad(0), deg_to_rad(angle), deg_to_rad(0))
+        result_rotation_matrix = np.matmul(result_rotation_matrix, rotation_matrix)
 
-        camera.position = camera_position.copy()
-        camera.update_parameters()
         image_camera = np.ones(camera.resolution, dtype=np.uint8) * 128
-        [kp_first_image, first_image_mask] = camera.calculate_keypoint_projections_to_plane(
-            generated_keypoints,
-            zero_rotation_matrix
-        )
 
-        camera.position += displacement_vector
-        camera.update_parameters()
-        [kp_second_image, second_image_mask] = camera.calculate_keypoint_projections_to_plane(
+        [keypoint_current, mask_current] = camera.calculate_keypoint_projections_to_plane(
             generated_keypoints,
-            rotation_matrix
+            result_rotation_matrix
         )
 
         kp_2d_1 = []
         kp_2d_2 = []
 
-        for kp_first_image, kp_second_image, is_visible_1, is_visible_2 in zip(kp_first_image, kp_second_image,
-                                                                               first_image_mask, second_image_mask):
+        for kp_first_image, kp_second_image, is_visible_1, is_visible_2 in zip(keypoint_current, keypoint_previous,
+                                                                               mask_current, mask_previous):
             if is_visible_1 and is_visible_2:
                 kp_2d_1.append(kp_first_image.copy())
                 kp_2d_2.append(kp_second_image.copy())
@@ -133,16 +128,14 @@ def main():
         print(kp_2d_2, file=f)
         f.close()
 
-        image_camera = visualize_keypoints_without_transformation(image_camera, kp_2d_1, cv2.MARKER_CROSS)
+        image_camera = visualize_keypoints_without_transformation(image_camera, kp_2d_1, cv2.MARKER_DIAMOND)
         cv2.imshow('camera view 1', image_camera)
 
-        image_camera = visualize_keypoints_without_transformation(image_camera, kp_2d_2, cv2.MARKER_DIAMOND)
+        image_camera = visualize_keypoints_without_transformation(image_camera, kp_2d_2, cv2.MARKER_CROSS)
         cv2.imshow('camera view 2', image_camera)
 
         image_camera = visualize_keypoints_deltas(image_camera, kp_2d_1, kp_2d_2)
         cv2.imshow('camera view 3', image_camera)
-
-        # image_camera = visualize_optical_flow(image_camera, kps_1, kps_2)
 
         cv2.waitKey(1)
 
@@ -150,16 +143,39 @@ def main():
         R1, R2, t = cv2.decomposeEssentialMat(E)
         # retval, R, t, mask = cv2.recoverPose(E, kps_1, kps_2, camera_matrix, mask=mask)
 
+        keypoint_previous = keypoint_current.copy()
+        mask_previous = mask_current.copy()
         real_angles.append(angle)
         calculated_angles_1.append(calculate_angles_from_rotation_matrix(R1))
         calculated_angles_2.append(calculate_angles_from_rotation_matrix(R2))
+        if abs(calculated_angles_1[-1][angle_index] - angle) < abs(calculated_angles_2[-1][angle_index] - angle):
+            result_angles.append(calculated_angles_1[-1][angle_index])
+        else:
+            result_angles.append(calculated_angles_2[-1][angle_index])
+
+        total_angle_calc.append(total_angle_calc[-1] + result_angles[-1])
 
     plt.plot(real_angles, 'b')
+    blue_patch = mpatches.Patch(color='blue', label='Действительный угол')
     # plt.plot([angle[0] for angle in calculated_angles_1], 'r')
     # plt.plot([angle[1] for angle in calculated_angles_1], 'g')
-    plt.plot([angle[2] for angle in calculated_angles_2], 'g')
-    plt.plot([angle[2] for angle in calculated_angles_1], 'y')
+    plt.plot(result_angles, 'g')
+    green_label = mpatches.Patch(color='green', label='Рассчитанный угол')
+    #plt.plot([angle[2] for angle in calculated_angles_1], 'y')
+    plt.legend(handles=[blue_patch, green_label], loc='upper right')
     plt.show()
+
+    plt.plot(total_angle_real, 'b')
+    plt.plot(total_angle_calc, 'g')
+    blue_patch = mpatches.Patch(color='blue', label='Действительный угол')
+    green_label = mpatches.Patch(color='green', label='Рассчитанный угол')
+    plt.legend(handles=[blue_patch, green_label], loc='upper right')
+    plt.show()
+
+    plt.plot([x - y for x, y in zip(total_angle_real, total_angle_calc)], 'g')
+    plt.show()
+
+    print(total_angle_real[-1] - total_angle_calc[-1])
 
     # plt.plot(real_angles, 'b')
     # # plt.plot([angle[0] for angle in calculated_angles_2], 'r')
