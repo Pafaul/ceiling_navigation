@@ -51,6 +51,11 @@ def calculate_angles_from_rotation_matrix(R: np.ndarray) -> list:
     ]
 
 
+def get_abs_diff_mat(R1: np.ndarray, R2: np.ndarray) -> float:
+    r = abs(R1 - R2)
+    return sum(sum(r))
+
+
 def get_abs_diff(angles_1: list, angles_2: list) -> float:
     return sum([(a1 - a2)**2 for a1, a2 in zip(angles_1, angles_2)])
 
@@ -189,8 +194,10 @@ def main():
         angles_1 = calculate_angles(tmp_rotation_matrix_1)
         angles_2 = calculate_angles(tmp_rotation_matrix_2)
 
-        eps_1 = get_abs_diff(angles_current, angles_1)
-        eps_2 = get_abs_diff(angles_current, angles_2)
+        # eps_1 = get_abs_diff(angles_current, angles_1)
+        # eps_2 = get_abs_diff(angles_current, angles_2)
+        eps_1 = get_abs_diff_mat(tmp_rotation_matrix_1, calculated_rotation_matrix)
+        eps_2 = get_abs_diff_mat(tmp_rotation_matrix_2, calculated_rotation_matrix)
 
         if eps_1 < eps_2:
             calculated_rotation_matrix = np.matmul(R1, calculated_rotation_matrix)
