@@ -20,6 +20,12 @@ class Camera:
         matrix_size = [math.atan(fov[0] / 2 / math.pi) * f * 2, math.atan(fov[1] / 2 / math.pi) * f * 2]
         self.matrix_size = matrix_size
         self.px_mm = [resolution[0] / matrix_size[0], resolution[1] / matrix_size[1]]
+        self.internal_matrix = np.eye(3)
+        self.internal_matrix[0, 0] = self.f / self.px_mm[0]
+        self.internal_matrix[1, 1] = self.f / self.px_mm[1]
+        self.internal_matrix[0, 2] = self.resolution[0] / 2
+        self.internal_matrix[1, 2] = self.resolution[1] / 2
+        self.internal_matrix[2, 2] = 1
 
     def set_camera_position(self, new_camera_position: np.ndarray):
         self.position = new_camera_position
