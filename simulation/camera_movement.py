@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from algorithm_tests.camera_v2 import Camera
+from simulation.camera_v2 import Camera
 from simulation.rotation_matrix import calculate_rotation_matrix
 
 
