@@ -108,23 +108,17 @@ def main():
     amplitude_x[0] = 0
     amplitude_x[1] = 0
     amplitude_x[2] = 0
-    amplitude_w = np.array([0, 0, 10 * math.pi / 180])
+    amplitude_w = np.array([10 * math.pi / 180, 10 * math.pi / 180, 0])
 
     movement = SinMovement(amplitude_x, amplitude_w, math.pi*6, 50)
     mask, visible_keypoints, keypoints_px, result_image = get_keypoints_and_img(canvas, keypoints, camera, coeffs)
     show_image('camera', result_image)
 
     current_kp = keypoints_px
-    previous_kp = []
 
     current_mask = mask
-    previous_mask = []
 
     r = np.eye(3)
-
-    # calculate keypoints on both pictures
-    # check which keypoints appear on both pictures
-    # calculate rotation matrixes based on known positions of keypoints
 
     angles = []
     real_angles = []
