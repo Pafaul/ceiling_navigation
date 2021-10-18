@@ -29,14 +29,15 @@ def visualize_keypoints(image: np.ndarray, keypoints: list, marker_type) -> np.n
     return img
 
 
-def draw_optical_flow(previous_kp: list, current_kp: list, canvas: np.ndarray):
+def draw_optical_flow(previous_mask: list, current_mask: list, previous_kp: list, current_kp: list, canvas: np.ndarray):
     img = canvas.copy()
-    for (kp_1, kp_2) in zip(previous_kp, current_kp):
-        cv2.line(
-            img,
-            tuple(kp_1),
-            tuple(kp_2),
-            (255, 255, 255),
-            thickness=4
-        )
+    for (visible_1, visible_2, kp_1, kp_2) in zip(previous_mask, current_mask, previous_kp, current_kp):
+        if visible_1 and visible_2:
+            cv2.line(
+                img,
+                (int(kp_1[0]), int(kp_1[1])),
+                (int(kp_2[0]), int(kp_2[1])),
+                (255, 255, 255),
+                thickness=4
+            )
     return img

@@ -187,8 +187,8 @@ def main():
         # R2 = l2r(R2)
         # retval, R, t, mask = cv2.recoverPose(E, kps_1, kps_2, camera_matrix, mask=mask)
 
-        tmp_rotation_matrix_1 = np.matmul(R1, calculated_rotation_matrix)
-        tmp_rotation_matrix_2 = np.matmul(R2, calculated_rotation_matrix)
+        tmp_rotation_matrix_1 = np.dot(R1, calculated_rotation_matrix)
+        tmp_rotation_matrix_2 = np.dot(R2, calculated_rotation_matrix)
 
         angles_current = calculate_angles(calculated_rotation_matrix)
         angles_1 = calculate_angles(tmp_rotation_matrix_1)

@@ -9,12 +9,12 @@ import matplotlib.patches as mpatches
 from simulation.camera_v2 import Camera
 
 from simulation.calculate_keypoint_image_position import calculate_keypoints_on_image
-from simulation.camera_movement import LinearMovement
+from simulation.camera_movement import LinearMovement, SinMovement
 from simulation.generate_image import generate_canvas
 from simulation.kp_generator import generate_keypoints_equal
 from simulation.rotation_matrix import calculate_rotation_matrix
 from simulation.transform_keypoints import convert_keypoints_to_px
-from simulation.vizualize_keypoints import visualize_keypoints
+from simulation.vizualize_keypoints import visualize_keypoints, draw_optical_flow
 
 
 def get_keypoints_and_img(canvas, keypoints, camera, coeffs):
@@ -62,9 +62,9 @@ def get_abs_diff_mat(R1: np.ndarray, R2: np.ndarray) -> float:
 def calculate_angles(R: np.ndarray) -> list:
     rad_to_deg = lambda x: x * 180 / math.pi
     return [
-        rad_to_deg(math.atan(-R[2][0] / ((R[2][1] ** 2 + R[2][2] ** 2) ** 0.5))),
-        rad_to_deg(math.atan(R[2][1] / R[2][2])),
-        rad_to_deg(math.atan(R[1][0] / R[0][0]))
+        rad_to_deg(math.atan(R[2, 1] / R[2, 2])),
+        rad_to_deg(-math.asin(R[2, 0])),
+        rad_to_deg(math.atan(R[1, 0]/R[0, 0]))
     ]
 
 
@@ -74,7 +74,7 @@ def main():
     initial_position[1] = 500
     initial_position[2] = 100
 
-    final_position = np.array([500, 500, 100])
+    final_position = np.array([600, 600, 100])
 
     initial_rotation = [0, 0, 0]
     initial_rotation_matrix = calculate_rotation_matrix(
@@ -83,16 +83,17 @@ def main():
         initial_rotation[2] * math.pi / 180
     )
 
-    final_rotation = [0, 10, 0]
+    final_rotation = [0, 0, 0]
 
     resolution = [600, 600]
-    fov = [30, 30]
+    fov = [60, 60]
     f = 40 / 1000
 
     camera = Camera(initial_position, initial_rotation_matrix, f, fov, resolution)
     canvas = generate_canvas(1500, 1500)
+    camera_canvas = generate_canvas(camera.resolution[0], camera.resolution[1])
 
-    keypoints = generate_keypoints_equal(np.array([1500, 1500]), x_keypoint_amount=40, y_keypoint_amount=40)
+    keypoints = generate_keypoints_equal(np.array([1500, 1500]), x_keypoint_amount=80, y_keypoint_amount=80)
 
     coeffs = [1, 1]
     px_keypoints = convert_keypoints_to_px(keypoints, coeffs, canvas.shape)
@@ -103,6 +104,13 @@ def main():
     cv2.waitKey(1)
 
     movement = LinearMovement(initial_position, final_position, initial_rotation, final_rotation, 10)
+    amplitude_x = np.ndarray([3, 1])
+    amplitude_x[0] = 0
+    amplitude_x[1] = 0
+    amplitude_x[2] = 0
+    amplitude_w = np.array([0, 0, 10 * math.pi / 180])
+
+    movement = SinMovement(amplitude_x, amplitude_w, math.pi*6, 50)
     mask, visible_keypoints, keypoints_px, result_image = get_keypoints_and_img(canvas, keypoints, camera, coeffs)
     show_image('camera', result_image)
 
@@ -112,7 +120,7 @@ def main():
     current_mask = mask
     previous_mask = []
 
-    r = camera.R.copy()
+    r = np.eye(3)
 
     # calculate keypoints on both pictures
     # check which keypoints appear on both pictures
@@ -140,19 +148,19 @@ def main():
         R1, R2, t = cv2.decomposeEssentialMat(E)
         tmp_rotation_matrix_1 = np.dot(R1, r)
         tmp_rotation_matrix_2 = np.dot(R2, r)
+        print(f'angles1: {calculate_angles(tmp_rotation_matrix_1)}, angles2: {calculate_angles(tmp_rotation_matrix_2)}')
         delta1 = get_abs_diff_mat(tmp_rotation_matrix_1, r)
         delta2 = get_abs_diff_mat(tmp_rotation_matrix_2, r)
 
+        print(f'delta1: {1}, delta2: {2}', delta1, delta2)
+
         if delta1 < delta2:
-            r = tmp_rotation_matrix_1
+            r = tmp_rotation_matrix_1.copy()
         else:
-            r = tmp_rotation_matrix_2
+            r = tmp_rotation_matrix_2.copy()
 
-        print(r)
-        print(camera.R)
-
+        real_angles.append(calculate_angles(camera.ufo.rotation_matrix))
         angles.append(calculate_angles(r))
-        real_angles.append(calculate_angles(camera.R))
 
     blue_patch = mpatches.Patch(color='blue', label='Действительный угол')
     red_patch = mpatches.Patch(color='red', label='Рассчитанный угол gamma')
@@ -160,18 +168,23 @@ def main():
     purple_patch = mpatches.Patch(color='purple', label='Рассчитанный угол Psi')
 
     plt.plot([angle[0] for angle in real_angles], 'b')
-    plt.plot([angle[0] for angle in angles], 'r')
+    plt.plot([-angle[0] for angle in angles], 'r')
     plt.legend(handles=[blue_patch, red_patch, green_patch, purple_patch], loc='upper right')
     plt.show()
 
     plt.plot([angle[1] for angle in real_angles], 'b')
-    plt.plot([angle[1] for angle in angles], 'r')
+    plt.plot([-angle[1] for angle in angles], 'r')
     plt.legend(handles=[blue_patch, red_patch, green_patch, purple_patch], loc='upper right')
     plt.show()
 
     plt.plot([angle[2] for angle in real_angles], 'b')
     plt.plot([angle[2] for angle in angles], 'r')
     plt.legend(handles=[blue_patch, red_patch, green_patch, purple_patch], loc='upper right')
+    plt.show()
+
+    plt.plot([real_angle[0] + angle[0] for (real_angle, angle) in zip(real_angles, angles)], 'b')
+    plt.plot([real_angle[1] + angle[1] for (real_angle, angle) in zip(real_angles, angles)], 'r')
+    plt.plot([real_angle[2] - angle[2] for (real_angle, angle) in zip(real_angles, angles)], 'g')
     plt.show()
 
 

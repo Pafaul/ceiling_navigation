@@ -10,8 +10,9 @@ class BasicCameraMovement:
     def move_camera(self, camera: Camera):
         pass
 
+
 class LinearMovement(BasicCameraMovement):
-    def __init__(self, start_point: np.array, finish_point: np.array, initial_angle: list, finish_angle: list,stop_points: int):
+    def __init__(self, start_point: np.array, finish_point: np.array, initial_angle: list, finish_angle: list, stop_points: int):
         self.moving_deltas = []
         delta_x = (finish_point[0] - start_point[0]) / stop_points
         delta_y = (finish_point[1] - start_point[1]) / stop_points
@@ -35,3 +36,22 @@ class LinearMovement(BasicCameraMovement):
             rotation_matrix = calculate_rotation_matrix(delta_rotation[0], delta_rotation[1], delta_rotation[2])
             camera.rotate_camera(rotation_matrix)
             yield camera.move_camera(delta_movement)
+
+
+class SinMovement(BasicCameraMovement):
+    def __init__(self, amplitude_x: np.array, amplitude_w: np.array, sin_max: float, stop_points: int):
+        t = np.linspace(0, sin_max, stop_points, endpoint=False)
+        self.first_points = np.sin(t[:-1])
+        self.second_points = np.sin(t[1:])
+        self.amplitude_x = amplitude_x
+        self.amplitude_w = amplitude_w
+
+    def move_camera(self, camera: Camera):
+        for (t1, t2) in zip(self.first_points, self.second_points):
+            delta = t2 - t1
+            delta_angles = self.amplitude_w * delta
+            delta_position = self.amplitude_x * delta
+            rotation_matrix = calculate_rotation_matrix(delta_angles[0], delta_angles[1], delta_angles[2])
+            camera.rotate_camera(rotation_matrix)
+            yield camera.move_camera(delta_position)
+
