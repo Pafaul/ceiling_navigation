@@ -2,6 +2,10 @@ import numpy as np
 
 
 def convert_keypoints_to_px(keypoints: list, coeffs: list, canvas_size: tuple) -> list:
+    """
+
+    :rtype: object
+    """
     result_keypoints_px = []
     for kp in keypoints:
         tmp = [0, 0]

@@ -14,7 +14,7 @@ from simulation.generate_image import generate_canvas
 from simulation.kp_generator import generate_keypoints_equal
 from simulation.rotation_matrix import calculate_rotation_matrix
 from simulation.transform_keypoints import convert_keypoints_to_px
-from simulation.vizualize_keypoints import visualize_keypoints, draw_optical_flow
+from simulation.vizualize_keypoints import visualize_keypoints, draw_optical_flow_img
 
 
 def get_keypoints_and_img(canvas, keypoints, camera, coeffs):
@@ -34,9 +34,24 @@ def draw_keypoints_on_img(canvas, keypoints, coeffs):
     return result_image
 
 
+def draw_optical_flow(canvas: np.ndarray, mask1: list, mask2: list, kp1: list, kp2: list):
+    keypoints_to_visualize_1 = []
+    keypoints_to_visualize_2 = []
+
+    for (visible_1, visible_2, kp_1, kp_2) in zip(mask1, mask2, kp1, kp2):
+        if visible_1 and visible_2:
+            keypoints_to_visualize_1.append(kp_1)
+            keypoints_to_visualize_2.append(kp_2)
+
+    img = visualize_keypoints(canvas, keypoints_to_visualize_1, cv2.MARKER_CROSS)
+    img = visualize_keypoints(img, keypoints_to_visualize_2, cv2.MARKER_DIAMOND)
+    img = draw_optical_flow_img(mask1, mask2, kp1, kp2, img)
+    return img
+
+
 def show_image(win_name, img):
     cv2.imshow(win_name, img)
-    cv2.waitKey(50)
+    cv2.waitKey(1)
 
 
 def get_keypoints_both_pictures(all_kp: list, kp1: list, kp2: list, mask1: list, mask2: list) -> (list, list, list):
@@ -93,7 +108,7 @@ def main():
     canvas = generate_canvas(1500, 1500)
     camera_canvas = generate_canvas(camera.resolution[0], camera.resolution[1])
 
-    keypoints = generate_keypoints_equal(np.array([1500, 1500]), x_keypoint_amount=80, y_keypoint_amount=80)
+    keypoints = generate_keypoints_equal(np.array([1500, 1500]), x_keypoint_amount=30, y_keypoint_amount=30)
 
     coeffs = [1, 1]
     px_keypoints = convert_keypoints_to_px(keypoints, coeffs, canvas.shape)
@@ -108,9 +123,9 @@ def main():
     amplitude_x[0] = 0
     amplitude_x[1] = 0
     amplitude_x[2] = 0
-    amplitude_w = np.array([10 * math.pi / 180, 10 * math.pi / 180, 0])
+    amplitude_w = np.array([10 * math.pi / 180, 0 * math.pi / 180, 0 * math.pi / 180])
 
-    movement = SinMovement(amplitude_x, amplitude_w, math.pi*6, 50)
+    movement = SinMovement(amplitude_x, amplitude_w, math.pi*100, 1500)
     mask, visible_keypoints, keypoints_px, result_image = get_keypoints_and_img(canvas, keypoints, camera, coeffs)
     show_image('camera', result_image)
 
@@ -137,6 +152,9 @@ def main():
                                                                            current_mask, previous_mask)
         img = draw_keypoints_on_img(canvas, real_kp, coeffs)
         show_image('both_pictures', img)
+
+        optical_flow = draw_optical_flow(camera_canvas, previous_mask, current_mask, previous_kp, current_kp)
+        show_image('optical_flow', optical_flow)
 
         E, mask = cv2.findEssentialMat(prev_img_kp, current_img_kp, camera.internal_matrix, method=cv2.RANSAC)
         R1, R2, t = cv2.decomposeEssentialMat(E)
