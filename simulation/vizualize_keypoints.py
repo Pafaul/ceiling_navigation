@@ -38,6 +38,6 @@ def draw_optical_flow_img(previous_mask: list, current_mask: list, previous_kp: 
                 (int(kp_1[0]), int(kp_1[1])),
                 (int(kp_2[0]), int(kp_2[1])),
                 (255, 255, 255),
-                thickness=4
+                thickness=2
             )
     return img

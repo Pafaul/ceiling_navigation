@@ -43,9 +43,10 @@ def draw_optical_flow(canvas: np.ndarray, mask1: list, mask2: list, kp1: list, k
             keypoints_to_visualize_1.append(kp_1)
             keypoints_to_visualize_2.append(kp_2)
 
-    img = visualize_keypoints(canvas, keypoints_to_visualize_1, cv2.MARKER_CROSS)
-    img = visualize_keypoints(img, keypoints_to_visualize_2, cv2.MARKER_DIAMOND)
+    img = canvas.copy()
     img = draw_optical_flow_img(mask1, mask2, kp1, kp2, img)
+    img = visualize_keypoints(img, keypoints_to_visualize_1, cv2.MARKER_CROSS)
+    img = visualize_keypoints(img, keypoints_to_visualize_2, cv2.MARKER_DIAMOND)
     return img
 
 
@@ -85,11 +86,11 @@ def calculate_angles(R: np.ndarray) -> list:
 
 def main():
     initial_position = np.zeros([3, 1])
-    initial_position[0] = 500
-    initial_position[1] = 500
+    initial_position[0] = 750
+    initial_position[1] = 750
     initial_position[2] = 100
 
-    final_position = np.array([600, 600, 100])
+    final_position = np.array([750, 750, 100])
 
     initial_rotation = [0, 0, 0]
     initial_rotation_matrix = calculate_rotation_matrix(
@@ -98,7 +99,7 @@ def main():
         initial_rotation[2] * math.pi / 180
     )
 
-    final_rotation = [0, 0, 0]
+    final_rotation = [0, -20, 0]
 
     resolution = [600, 600]
     fov = [60, 60]
@@ -123,7 +124,7 @@ def main():
     amplitude_x[0] = 0
     amplitude_x[1] = 0
     amplitude_x[2] = 0
-    amplitude_w = np.array([10 * math.pi / 180, 0 * math.pi / 180, 0 * math.pi / 180])
+    amplitude_w = np.array([10 * math.pi / 180, 10 * math.pi / 180, 0 * math.pi / 180])
 
     movement = SinMovement(amplitude_x, amplitude_w, math.pi*100, 1500)
     mask, visible_keypoints, keypoints_px, result_image = get_keypoints_and_img(canvas, keypoints, camera, coeffs)
