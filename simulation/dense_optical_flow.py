@@ -98,14 +98,14 @@ def visualize_optical_flow(canvas: np.ndarray, previous_keypoints: list, current
 
 
 def main():
-    moving_points = 100
+    moving_points = 5
 
     initial_position = np.zeros([3, 1])
     initial_position[0] = 0
     initial_position[1] = 0
-    initial_position[2] = 100
+    initial_position[2] = 200
 
-    final_position = np.array([0, 0, 100])
+    final_position = np.array([0, 0, 200])
 
     initial_rotation = [0, 0, 0]
     initial_rotation_matrix = calculate_rotation_matrix(
@@ -114,7 +114,7 @@ def main():
         initial_rotation[2] * math.pi / 180
     )
 
-    final_rotation = [0, 0, 0]
+    final_rotation = [20, 0, 0]
 
     resolution = [600, 600]
     fov = [60, 60]
@@ -122,16 +122,16 @@ def main():
 
     camera = Camera(initial_position, initial_rotation_matrix, f, fov, resolution)
 
-    keypoints = generate_keypoints_on_image(camera, x_keypoints=6, y_keypoints=4)
+    keypoints = generate_keypoints_on_image(camera, x_keypoints=4, y_keypoints=4)
 
-    # movement = LinearMovement(initial_position, final_position, initial_rotation, final_rotation, moving_points)
+    movement = LinearMovement(initial_position, final_position, initial_rotation, final_rotation, moving_points)
     amplitude_x = np.ndarray([3, 1])
     amplitude_x[0] = 0
     amplitude_x[1] = 0
     amplitude_x[2] = 0
     amplitude_w = np.array([0 * math.pi / 180, 0 * math.pi / 180, 10 * math.pi / 180])
 
-    movement = SinMovement(amplitude_x, amplitude_w, math.pi*10, moving_points)
+    # movement = SinMovement(amplitude_x, amplitude_w, math.pi*10, moving_points)
 
     mask = [True] * len(keypoints)
 
@@ -170,7 +170,7 @@ def main():
         cv2.imshow('visual flow', img)
         cv2.waitKey(10)
 
-        E, mask = cv2.findEssentialMat(np.int32(keypoints), np.int32(px_keypoints), camera.internal_matrix, method=cv2.RANSAC)
+        E, mask = cv2.findEssentialMat(np.int32(keypoints), np.int32(all_keypoints), camera.internal_matrix, method=cv2.RANSAC)
         R1, R2, t = cv2.decomposeEssentialMat(E)
         tmp_rotation_matrix_1 = np.dot(R1, r)
         tmp_rotation_matrix_2 = np.dot(R2, r)
@@ -193,22 +193,23 @@ def main():
 
     plt.plot([angle[0] for angle in real_angles], 'b')
     plt.plot([angle[0] for angle in angles], 'r')
-    plt.legend(handles=[blue_patch, red_patch, green_patch, purple_patch], loc='upper right')
+    plt.legend(handles=[blue_patch, red_patch], loc='upper right')
     plt.show()
 
     plt.plot([angle[1] for angle in real_angles], 'b')
-    plt.plot([angle[1] for angle in angles], 'r')
-    plt.legend(handles=[blue_patch, red_patch, green_patch, purple_patch], loc='upper right')
+    plt.plot([angle[1] for angle in angles], 'g')
+    plt.legend(handles=[blue_patch, green_patch], loc='upper right')
     plt.show()
 
     plt.plot([angle[2] for angle in real_angles], 'b')
-    plt.plot([angle[2] for angle in angles], 'r')
-    plt.legend(handles=[blue_patch, red_patch, green_patch, purple_patch], loc='upper right')
+    plt.plot([-angle[2] for angle in angles], 'purple')
+    plt.legend(handles=[blue_patch, purple_patch], loc='upper right')
     plt.show()
 
-    plt.plot([real_angle[0] - angle[0] for (real_angle, angle) in zip(real_angles, angles)], 'b')
-    plt.plot([real_angle[1] - angle[1] for (real_angle, angle) in zip(real_angles, angles)], 'r')
-    plt.plot([real_angle[2] - angle[2] for (real_angle, angle) in zip(real_angles, angles)], 'g')
+    plt.plot([real_angle[0] - angle[0] for (real_angle, angle) in zip(real_angles, angles)], 'r')
+    plt.plot([real_angle[1] - angle[1] for (real_angle, angle) in zip(real_angles, angles)], 'g')
+    plt.plot([real_angle[2] + angle[2] for (real_angle, angle) in zip(real_angles, angles)], 'b')
+    plt.legend(handles=[blue_patch, red_patch, green_patch, purple_patch], loc='upper right')
     plt.show()
 
 
