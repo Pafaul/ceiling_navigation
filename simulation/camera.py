@@ -10,14 +10,15 @@ class UFO:
     UFO - class representing real moving object
     """
     def __init__(self, initial_position: np.ndarray, rotation_matrix: np.ndarray):
-        self.position = initial_position
-        self.rotation_matrix = rotation_matrix
+        self.position = initial_position.copy()
+        self.rotation_matrix = np.eye(3)
 
     def rotate(self, rotation_matrix: np.ndarray):
         self.rotation_matrix = np.dot(rotation_matrix, self.rotation_matrix)
 
     def move(self, delta):
         self.position = self.position + delta
+
 
 class Camera:
 
@@ -54,11 +55,16 @@ class Camera:
         self.internal_matrix[2, 2] = 1
 
     def set_camera_position(self, new_camera_position: np.ndarray):
-        self.position = new_camera_position
+        self.position = new_camera_position.copy()
+        self.ufo.position = new_camera_position.copy()
+
+    def set_rotation(self, new_rotation_matrix: np.ndarray):
+        self.ufo.rotation_matrix = new_rotation_matrix.copy()
+        self.R = np.dot(self.ufo_r_to_camera, self.ufo.rotation_matrix)
 
     def move_camera(self, position_delta: np.ndarray):
         self.ufo.move(position_delta)
-        self.position = self.ufo.position
+        self.position = self.ufo.position.copy()
 
     def rotate_camera(self, rotation_matrix: np.ndarray):
         self.ufo.rotate(rotation_matrix)

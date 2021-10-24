@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+from simulation.transform_keypoints import convert_keypoints_to_px
+
 
 def get_color(px_position: list, canvas_size: tuple) -> tuple:
     x = px_position[0]
@@ -13,12 +15,48 @@ def get_color(px_position: list, canvas_size: tuple) -> tuple:
     return int(color[0]), int(color[1]), int(color[2])
 
 
+def draw_keypoints_on_img(canvas, keypoints, visualization_config):
+    px_camera_keypoints = convert_keypoints_to_px(
+        keypoints,
+        visualization_config['coefficients'],
+        canvas.shape
+    )
+    return visualize_keypoints(canvas, px_camera_keypoints, cv2.MARKER_DIAMOND)
+
+
+def draw_optical_flow(canvas: np.ndarray, mask1: list, mask2: list, kp1: list, kp2: list, visualization_config: dict):
+    keypoints_to_visualize_1 = []
+    keypoints_to_visualize_2 = []
+
+    for (visible_1, visible_2, kp_1, kp_2) in zip(mask1, mask2, kp1, kp2):
+        if visible_1 and visible_2:
+            keypoints_to_visualize_1.append(kp_1)
+            keypoints_to_visualize_2.append(kp_2)
+
+    img = canvas.copy()
+    img = draw_optical_flow_img(mask1, mask2, kp1, kp2, img)
+    img = visualize_keypoints(img, keypoints_to_visualize_1, cv2.MARKER_CROSS)
+    img = visualize_keypoints(img, keypoints_to_visualize_2, cv2.MARKER_DIAMOND)
+    return img
+
+
+def show_image(win_name, img, visualization_config: dict):
+    if visualization_config['visualization_enabled']:
+        img = cv2.resize(img, (
+            visualization_config['visualization_resolution'][0],
+            visualization_config['visualization_resolution'][1]
+        ))
+        cv2.imshow(win_name, img)
+        cv2.waitKey(
+            visualization_config['visualization_pause']
+        )
+
+
 def visualize_keypoints(image: np.ndarray, keypoints: list, marker_type) -> np.ndarray:
     """
     Draw keypoints on previously created image
     :param image: image to draw keypoints on
     :param keypoints: list with keypoints
-    :param boundaries: real world boundaries
     :param marker_type: marker type: cv2.MARKER_CROSS/cv2.MARKER_DIAMOND/...
     :return:
     """

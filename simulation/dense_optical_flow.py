@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 from simulation.camera_movement import LinearMovement, SinMovement
-from simulation.camera_v2 import Camera
+from simulation.camera import Camera
 from simulation.generate_image import generate_canvas
 from simulation.rotation_matrix import calculate_rotation_matrix
 from simulation.vizualize_keypoints import visualize_keypoints, draw_optical_flow_img
@@ -23,8 +23,11 @@ def calculate_angles(R: np.ndarray) -> list:
 
 
 def get_abs_diff_mat(R1: np.ndarray, R2: np.ndarray) -> float:
-    r = abs(R1 - R2)
-    return sum(sum(r))
+    # r = abs(R1 - R2)
+    angles1 = np.array(calculate_angles(R1))
+    angles2 = np.array(calculate_angles(R2))
+    delta = sum(abs(angles1 - angles2))
+    return delta
 
 
 def generate_keypoints_on_image(camera: Camera, x_keypoints = 6, y_keypoints = 4) -> list:
@@ -61,7 +64,7 @@ def px_to_obj(camera: Camera, keypoints: list) -> list:
     return kp_obj
 
 
-def obj_to_px(camera: Camera, keypoints: list) -> list:
+def obj_to_px(camera: Camera, keypoints: list) -> tuple:
     visible_keypoints = []
     all_keypoints = []
     mask = []
@@ -98,14 +101,14 @@ def visualize_optical_flow(canvas: np.ndarray, previous_keypoints: list, current
 
 
 def main():
-    moving_points = 5
+    moving_points = 100
 
     initial_position = np.zeros([3, 1])
     initial_position[0] = 0
     initial_position[1] = 0
-    initial_position[2] = 200
+    initial_position[2] = 1000
 
-    final_position = np.array([0, 0, 200])
+    final_position = np.array([0, 0, 1000])
 
     initial_rotation = [0, 0, 0]
     initial_rotation_matrix = calculate_rotation_matrix(
@@ -114,9 +117,9 @@ def main():
         initial_rotation[2] * math.pi / 180
     )
 
-    final_rotation = [20, 0, 0]
+    final_rotation = [0, 0, 180]
 
-    resolution = [600, 600]
+    resolution = [1500, 1500]
     fov = [60, 60]
     f = 40 / 1000
 
@@ -129,13 +132,13 @@ def main():
     amplitude_x[0] = 0
     amplitude_x[1] = 0
     amplitude_x[2] = 0
-    amplitude_w = np.array([0 * math.pi / 180, 0 * math.pi / 180, 10 * math.pi / 180])
+    amplitude_w = np.array([0 * math.pi / 180, 0 * math.pi / 180, 20 * math.pi / 180])
 
-    # movement = SinMovement(amplitude_x, amplitude_w, math.pi*10, moving_points)
+    movement = SinMovement(amplitude_x, amplitude_w, math.pi*10, moving_points)
 
     mask = [True] * len(keypoints)
 
-    r = np.eye(3)
+    r = camera.R.copy()
 
     angles = []
     real_angles = []
@@ -143,7 +146,9 @@ def main():
     move_camera = movement.move_camera(camera)
     for i in range(moving_points-1):
 
-        canvas = generate_canvas(600, 600)
+        keypoints = generate_keypoints_on_image(camera, x_keypoints=4, y_keypoints=4)
+
+        canvas = generate_canvas(camera.resolution[0], camera.resolution[1])
 
         img = visualize_keypoints(canvas, keypoints, cv2.MARKER_DIAMOND)
         result_image = cv2.resize(img, (800, 800))
@@ -187,9 +192,9 @@ def main():
         angles.append(calculate_angles(r))
 
     blue_patch = mpatches.Patch(color='blue', label='Действительный угол')
-    red_patch = mpatches.Patch(color='red', label='Рассчитанный угол gamma')
-    green_patch = mpatches.Patch(color='green', label='Рассчитанный угол theta')
-    purple_patch = mpatches.Patch(color='purple', label='Рассчитанный угол Psi')
+    red_patch = mpatches.Patch(color='red', label='Рассчитанный угол wx')
+    green_patch = mpatches.Patch(color='green', label='Рассчитанный угол wy')
+    purple_patch = mpatches.Patch(color='purple', label='Рассчитанный угол wz')
 
     plt.plot([angle[0] for angle in real_angles], 'b')
     plt.plot([angle[0] for angle in angles], 'r')
@@ -202,14 +207,14 @@ def main():
     plt.show()
 
     plt.plot([angle[2] for angle in real_angles], 'b')
-    plt.plot([-angle[2] for angle in angles], 'purple')
+    plt.plot([- angle[2] for angle in angles], 'purple')
     plt.legend(handles=[blue_patch, purple_patch], loc='upper right')
     plt.show()
 
     plt.plot([real_angle[0] - angle[0] for (real_angle, angle) in zip(real_angles, angles)], 'r')
     plt.plot([real_angle[1] - angle[1] for (real_angle, angle) in zip(real_angles, angles)], 'g')
-    plt.plot([real_angle[2] + angle[2] for (real_angle, angle) in zip(real_angles, angles)], 'b')
-    plt.legend(handles=[blue_patch, red_patch, green_patch, purple_patch], loc='upper right')
+    plt.plot([real_angle[2] + angle[2] for (real_angle, angle) in zip(real_angles, angles)], 'purple')
+    plt.legend(handles=[red_patch, green_patch, purple_patch], loc='upper right')
     plt.show()
 
 

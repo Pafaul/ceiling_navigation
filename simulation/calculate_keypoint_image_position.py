@@ -1,6 +1,6 @@
 import numpy as np
 
-from simulation.camera_v2 import Camera
+from simulation.camera import Camera
 
 
 def calculate_keypoints_on_image(keypoints: list, camera: Camera):
