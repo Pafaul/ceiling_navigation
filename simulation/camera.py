@@ -1,5 +1,4 @@
 import math
-from math import tan, sqrt
 import numpy as np
 
 from simulation.rotation_matrix import calculate_rotation_matrix
@@ -11,7 +10,7 @@ class UFO:
     """
     def __init__(self, initial_position: np.ndarray, rotation_matrix: np.ndarray):
         self.position = initial_position.copy()
-        self.rotation_matrix = np.eye(3)
+        self.rotation_matrix = rotation_matrix.copy()
 
     def rotate(self, rotation_matrix: np.ndarray):
         self.rotation_matrix = np.dot(rotation_matrix, self.rotation_matrix)
@@ -76,3 +75,10 @@ class Camera:
     def project_point_on_camera(self):
         return self.R
 
+
+def calculate_camera_fov(camera: Camera) -> list:
+    fov = [
+        math.atan(camera.fov[0] / 2 / math.pi) * camera.position[2] * 2,
+        math.atan(camera.fov[1] / 2 / math.pi) * camera.position[2] * 2,
+    ]
+    return fov
