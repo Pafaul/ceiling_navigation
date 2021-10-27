@@ -46,7 +46,7 @@ def calculate_obj_rotation_matrix(
         camera: Camera,
         rotation_matrix: np.ndarray
 ):
-    E, mask = cv2.findEssentialMat(previous_kp, current_kp, camera.internal_matrix, method=cv2.RANSAC)
+    E, mask = cv2.findEssentialMat(previous_kp, current_kp, camera.internal_matrix, method=cv2.RANSAC, threshold=0.5)
     R1, R2, t = cv2.decomposeEssentialMat(E)
     tmp_rotation_matrix_1 = np.dot(R1, rotation_matrix)
     tmp_rotation_matrix_2 = np.dot(R2, rotation_matrix)
@@ -54,14 +54,34 @@ def calculate_obj_rotation_matrix(
     delta1 = get_abs_diff_mat(tmp_rotation_matrix_1, rotation_matrix)
     delta2 = get_abs_diff_mat(tmp_rotation_matrix_2, rotation_matrix)
 
+    E_test, mask_test = cv2.findEssentialMat(current_kp, previous_kp, camera.internal_matrix, method=cv2.LMEDS)
+    R1_test, R2_test, t = cv2.decomposeEssentialMat(E_test)
+    rotation_test_1 = np.dot(R1_test, rotation_matrix)
+    rotation_test_2 = np.dot(R2_test, rotation_matrix)
+    delta1_test = get_abs_diff_mat(rotation_test_1, rotation_matrix)
+    delta2_test = get_abs_diff_mat(rotation_test_2, rotation_matrix)
+    rotation_matrix_to_test = rotation_test_1 if delta1_test < delta2_test else rotation_test_2
     # print(f'delta1: {1}, delta2: {2}', delta1, delta2)
 
+    is_correct = True
     if delta1 < delta2:
-        rotation_matrix = tmp_rotation_matrix_1.copy()
+        angles = calculate_angles(R1)
+        angles_test = calculate_angles(rotation_matrix_to_test)
+        delta_angles = sum([a + at for (a, at) in zip(angles, angles_test)])
+        if delta_angles > 3:
+            is_correct = False
+        else:
+            rotation_matrix = tmp_rotation_matrix_1.copy()
     else:
-        rotation_matrix = tmp_rotation_matrix_2.copy()
+        angles = calculate_angles(R1)
+        angles_test = calculate_angles(rotation_matrix_to_test)
+        delta_angles = sum([a + at for (a, at) in zip(angles, angles_test)])
+        if delta_angles > 1:
+            is_correct = False
+        else:
+            rotation_matrix = tmp_rotation_matrix_2.copy()
 
-    return rotation_matrix
+    return rotation_matrix, is_correct
 
 
 def calculate_angles_delta(real_angles, angles) -> list:

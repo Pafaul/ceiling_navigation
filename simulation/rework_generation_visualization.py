@@ -125,16 +125,18 @@ def run_simulation(
     position[2] = camera.position[2]
     current_obj_keypoints = px_to_obj(keypoints=current_kp, mask=current_mask, position=position, camera=camera)
     total = np.zeros([2, 1])
+    is_calculation_correct = True
     for _ in movement.move_camera(camera):
         mask, visible_keypoints, keypoints_px = calculate_keypoints_on_image(keypoints, camera)
         if visualization_config['visualization_enabled']:
             img = draw_keypoints_on_img(canvas, visible_keypoints, visualization_config)
             show_image('camera', img, visualization_config)
 
-        previous_kp = current_kp.copy()
-        current_kp = keypoints_px.copy()
+        if is_calculation_correct:
+            previous_kp = current_kp.copy()
+            previous_mask = current_mask.copy()
 
-        previous_mask = current_mask.copy()
+        current_kp = keypoints_px.copy()
         current_mask = mask.copy()
 
         prev_img_kp, current_img_kp, real_kp, mask_both_pics = get_keypoints_both_pictures(
@@ -170,7 +172,7 @@ def run_simulation(
                                              current_kp, visualization_config)
             show_image('optical_flow', optical_flow, visualization_config)
 
-        r = calculate_obj_rotation_matrix(
+        r, is_calculation_correct = calculate_obj_rotation_matrix(
             previous_kp=prev_img_kp,
             current_kp=current_img_kp,
             camera=camera,
