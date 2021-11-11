@@ -46,7 +46,7 @@ def calculate_obj_rotation_matrix(
         camera: Camera,
         rotation_matrix: np.ndarray
 ):
-    E, mask = cv2.findEssentialMat(previous_kp, current_kp, camera.internal_matrix, method=cv2.LMEDS)
+    E, mask = cv2.findEssentialMat(previous_kp, current_kp, camera.internal_matrix, method=cv2.LMEDS, threshold=0.1)
     R1, R2, t = cv2.decomposeEssentialMat(E)
     tmp_rotation_matrix_1 = np.dot(R1, rotation_matrix)
     tmp_rotation_matrix_2 = np.dot(R2, rotation_matrix)
