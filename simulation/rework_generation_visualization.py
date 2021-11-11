@@ -24,8 +24,8 @@ def get_processes_pool(iterations: int):
     return processes_to_use, multiprocessing.Pool(processes_to_use)
 
 
-def px_to_obj(keypoints: list, mask: list, position: np.ndarray, camera: Camera) -> list:
-    r = camera.R.copy()
+def px_to_obj(keypoints: list, mask: list, position: np.ndarray, camera: Camera, rotation_matrix: np.ndarray) -> list:
+    r = rotation_matrix.copy()
     u = camera.resolution[0] / 2 * camera.px_mm[0]
     v = camera.resolution[1] / 2 * camera.px_mm[1]
     kp_obj = []
@@ -123,7 +123,13 @@ def run_simulation(
     current_mask, visible_keypoints, current_kp, = calculate_keypoints_on_image(keypoints, camera)
     position = np.zeros([3, 1])
     position[2] = camera.position[2]
-    current_obj_keypoints = px_to_obj(keypoints=current_kp, mask=current_mask, position=position, camera=camera)
+    current_obj_keypoints = px_to_obj(
+        keypoints=current_kp,
+        mask=current_mask,
+        position=position,
+        camera=camera,
+        rotation_matrix=r
+    )
     total = np.zeros([2, 1])
     is_calculation_correct = True
     for _ in movement.move_camera(camera):
@@ -145,11 +151,18 @@ def run_simulation(
             current_mask, previous_mask
         )
 
+        r = calculate_obj_rotation_matrix(
+            previous_kp=prev_img_kp,
+            current_kp=current_img_kp,
+            camera=camera,
+            rotation_matrix=r
+        )
+
         data_for_lms = prepare_data_for_lms(
             keypoints_obj=current_obj_keypoints,
-            px_keypoints=keypoints_px,
+            px_keypoints=current_kp,
             mask=mask_both_pics,
-            r=r,
+            r=np.dot(camera.ufo_r_to_camera, r),
             z=camera.position[2],
             f=camera.f,
             px_mm=camera.px_mm,
@@ -162,7 +175,13 @@ def run_simulation(
 
         position[2] = camera.position[2]
 
-        current_obj_keypoints = px_to_obj(keypoints=current_kp, mask=current_mask, position=position, camera=camera)
+        current_obj_keypoints = px_to_obj(
+            keypoints=current_kp,
+            mask=current_mask,
+            position=position,
+            camera=camera,
+            rotation_matrix=np.dot(camera.ufo_r_to_camera, r)
+        )
 
         if visualization_config['visualization_enabled']:
             img = draw_keypoints_on_img(canvas, real_kp, visualization_config)
@@ -178,7 +197,6 @@ def run_simulation(
             camera=camera,
             rotation_matrix=r
         )
-
         real_angles.append(calculate_angles(camera.ufo.rotation_matrix))
         angles.append(calculate_angles(r))
         real_positions.append(camera.position.copy())
@@ -269,7 +287,7 @@ def heights_internal_cycle(
         canvas_size = [f * 6 for f in fov]
         visualization_params['coefficients'] = [d / c for (c, d) in
                                                 zip(canvas_size, visualization_params['canvas_size'])]
-        keypoints = generate_keypoints_equal(np.array(canvas_size), x_keypoint_amount=50, y_keypoint_amount=50)
+        keypoints = generate_keypoints_equal(np.array(canvas_size), x_keypoint_amount=80, y_keypoint_amount=80)
 
         real_angles, angles, initial_position, real_positions, calculated_positions = run_simulation(
             camera=camera_to_use,
