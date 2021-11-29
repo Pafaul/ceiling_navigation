@@ -9,4 +9,4 @@ python-dateutil==2.8.1
 scipy==1.6.1
 six==1.15.0
 
-opencv-python~=4.5.3.56
+opencv-python~=4.5.4.60

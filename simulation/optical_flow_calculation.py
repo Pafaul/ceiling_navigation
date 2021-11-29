@@ -34,9 +34,9 @@ def calculate_angles(R: np.ndarray) -> list:
         return x * 180 / math.pi
 
     return [
-        rad_to_deg(math.atan(R[2, 1] / R[2, 2])),
+        rad_to_deg(math.atan2(R[2, 1], R[2, 2])),
         rad_to_deg(-math.asin(R[2, 0])),
-        rad_to_deg(math.atan(R[1, 0] / R[0, 0]))
+        rad_to_deg(math.atan2(R[1, 0], R[0, 0]))
     ]
 
 

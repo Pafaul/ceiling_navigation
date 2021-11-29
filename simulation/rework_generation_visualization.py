@@ -59,11 +59,13 @@ def prepare_data_for_lms(keypoints_obj: list, px_keypoints: list, mask: list, r:
             cy1 = (v - kp_px[1] * px_mm[1]) / f
             cx2 = \
                 kp_obj[0] * (r[0, 0] - r[0, 2] * cx1) + \
-                kp_obj[1] * (r[1, 0] - r[1, 2] * cx1) - \
+                kp_obj[1] * (r[1, 0] - r[1, 2] * cx1) + \
+                kp_obj[2] * (r[2, 0] - r[2, 2] * cx1) - \
                 z * (r[2, 0] - r[2, 2] * cx1)
             cy2 = \
                 kp_obj[0] * (r[0, 1] - r[0, 2] * cy1) + \
-                kp_obj[1] * (r[1, 1] - r[1, 2] * cy1) - \
+                kp_obj[1] * (r[1, 1] - r[1, 2] * cy1) + \
+                kp_obj[2] * (r[2, 1] - r[2, 2] * cy1) - \
                 z * (r[2, 1] - r[2, 2] * cy1)
 
             a = r[0, 0] - r[0, 2] * cx1
@@ -74,7 +76,8 @@ def prepare_data_for_lms(keypoints_obj: list, px_keypoints: list, mask: list, r:
                 a, b, cx2, d, e, cy2
             ))
         else:
-            coefficients.append(tuple([0]*6))
+            pass
+            # coefficients.append(tuple([0]*6))
     return coefficients
 
 
@@ -104,12 +107,14 @@ def run_simulation(
 ):
     canvas = generate_canvas(
         height=visualization_config['canvas_size'][0],
-        width=visualization_config['canvas_size'][1]
+        width=visualization_config['canvas_size'][1],
+        coefficients=visualization_config['coefficients']
     )
 
     camera_canvas = generate_canvas(
         height=camera.resolution[0],
-        width=camera.resolution[1]
+        width=camera.resolution[1],
+        coefficients=[1, 1]
     )
 
     r = np.eye(3)
@@ -132,6 +137,8 @@ def run_simulation(
     )
     total = np.zeros([2, 1])
     for _ in movement.move_camera(camera):
+        real_positions.append(camera.position.copy())
+        real_angles.append(calculate_angles(camera.ufo.rotation_matrix))
         mask, visible_keypoints, keypoints_px = calculate_keypoints_on_image(keypoints, camera)
         if visualization_config['visualization_enabled']:
             img = draw_keypoints_on_img(canvas, visible_keypoints, visualization_config)
@@ -170,6 +177,7 @@ def run_simulation(
         A, B = construct_matrices_lsm(data_for_lms)
 
         X = lsm(A, B)
+        X[1] = X[1] - int(X[1]) + 0
 
         position[2] = camera.position[2]
 
@@ -189,9 +197,7 @@ def run_simulation(
                                              current_kp, visualization_config)
             show_image('optical_flow', optical_flow, visualization_config)
 
-        real_angles.append(calculate_angles(camera.ufo.rotation_matrix))
         angles.append(calculate_angles(r))
-        real_positions.append(camera.position.copy())
         tmp_position = np.zeros([3, 1])
         total = total + X
         tmp_position[0] = total[0]
@@ -371,7 +377,7 @@ def resolution_internal_cycle(
         )
 
         fov = calculate_camera_fov(camera)
-        canvas_size = [f * 6 for f in fov]
+        canvas_size = [f * 10 for f in fov]
         visualization_params['coefficients'] = [d / c for (c, d) in
                                                 zip(canvas_size, visualization_params['canvas_size'])]
         keypoints = generate_keypoints_equal(np.array(canvas_size), x_keypoint_amount=100, y_keypoint_amount=100)
