@@ -65,7 +65,7 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
     for (result, frame) in video_source.get_frame():
         if result:
             h, w = frame.shape[:2]
-            frame = cv2.resize(frame, (int(w / 1.5), int(h / 1.5)))
+            frame = cv2.resize(frame, (1080, 720)) # (int(w / 1.5), int(h / 1.5)))
             grayscale_img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             if current_img is not None:
                 prev_img = current_img.copy()
@@ -78,8 +78,8 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
                     current_img=current_img,
                     template_window_size=[32, 32],
                     search_window_size=[64, 64],
-                    x_regions=7,
-                    y_regions=7
+                    x_regions=6,
+                    y_regions=6
                 )
 
                 vectors = calculate_optical_flow(kp_curr, kp_prev)
@@ -136,6 +136,8 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
                 else:
                     current_img = None
                     prev_img = None
+
+    plt.ioff()
 
 
 def draw_kp(img: np.ndarray, kp):
