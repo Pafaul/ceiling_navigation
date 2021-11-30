@@ -79,8 +79,8 @@ def filter_optical_flow(of: list):
     mean_phi = np.mean(phi)
     disp_phi = np.std(phi)
 
-    mask_a = [True if abs(cur_a - mean_a) < disp_a else False for cur_a in a]
-    mask_phi = [True if abs(cur_phi - mean_phi) < disp_phi else False for cur_phi in phi]
+    mask_a = [True if abs(cur_a - mean_a) < 2*disp_a else False for cur_a in a]
+    mask_phi = [True if abs(cur_phi - mean_phi) < 2*disp_phi else False for cur_phi in phi]
     res_mask = [m_a and m_phi for (m_a, m_phi) in zip(mask_a, mask_phi)]
     res_of = []
     for i in range(len(res_mask)):
@@ -100,18 +100,15 @@ def calculate_obj_rotation_matrix(
     R1, R2, t = cv2.decomposeEssentialMat(E)
     R1 = fix_r(R1)
     R2 = fix_r(R2)
-    # tmp_rotation_matrix_1 = np.dot(R1, rotation_matrix)
-    # tmp_rotation_matrix_2 = np.dot(R2, rotation_matrix)
-    # delta1 = get_abs_diff_mat(tmp_rotation_matrix_1, rotation_matrix)
-    # delta2 = get_abs_diff_mat(tmp_rotation_matrix_2, rotation_matrix)
-    #
-    # if delta1 < delta2:
-    #     rotation_matrix = tmp_rotation_matrix_1.copy()
-    # else:
-    #     rotation_matrix = tmp_rotation_matrix_2.copy()
+    tmp_rotation_matrix_1 = np.dot(R1, rotation_matrix)
+    tmp_rotation_matrix_2 = np.dot(R2, rotation_matrix)
+    delta1 = get_abs_diff_mat(tmp_rotation_matrix_1, rotation_matrix)
+    delta2 = get_abs_diff_mat(tmp_rotation_matrix_2, rotation_matrix)
 
-    r = get_correct_r(R1, R2)
-    rotation_matrix = np.dot(r, rotation_matrix)
+    if delta1 < delta2:
+        rotation_matrix = tmp_rotation_matrix_1.copy()
+    else:
+        rotation_matrix = tmp_rotation_matrix_2.copy()
 
     return rotation_matrix
 

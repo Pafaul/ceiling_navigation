@@ -76,8 +76,8 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
                 kp_prev, kp_curr = dense_optical_flow(
                     previous_img=prev_img,
                     current_img=current_img,
-                    template_window_size=[64, 64],
-                    search_window_size=[96, 96],
+                    template_window_size=[32, 32],
+                    search_window_size=[64, 64],
                     x_regions=7,
                     y_regions=7
                 )
