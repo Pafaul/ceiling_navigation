@@ -177,7 +177,6 @@ def run_simulation(
         A, B = construct_matrices_lsm(data_for_lms)
 
         X = lsm(A, B)
-        X[1] = X[1] - int(X[1]) + 0
 
         position[2] = camera.position[2]
 
