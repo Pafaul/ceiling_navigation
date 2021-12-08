@@ -47,6 +47,60 @@ def dense_optical_flow(
     return of_prev, of_curr
 
 
+def draw_regions(img: np.ndarray, template_window_size: list, search_window_size: list, x_regions: int, y_regions: int):
+    h, w = img.shape[:2]
+    delta_x = w / x_regions
+    delta_y = h / y_regions
+    for x_index in range(0, x_regions):
+        for y_index in range(0, y_regions):
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.5
+            font_color = (255,)
+            thickness = 1
+            line_type = 1
+
+            x_center, y_center = int(delta_x * (x_index + 1/2)), int(delta_y * (y_index + 1/2))
+            cv2.rectangle(
+                img=img,
+                pt1=(int(x_center - template_window_size[0]/2), int(y_center - template_window_size[1] / 2)),
+                pt2=(int(x_center + template_window_size[0]/2), int(y_center + template_window_size[1] / 2)),
+                color=(255,),
+                thickness=3
+            )
+
+            cv2.rectangle(
+                img=img,
+                pt1=(int(x_center - search_window_size[0] / 2), int(y_center - search_window_size[1] / 2)),
+                pt2=(int(x_center + search_window_size[0] / 2), int(y_center + search_window_size[1] / 2)),
+                color=(255,),
+                thickness=3
+            )
+
+            cv2.putText(
+                img=img,
+                org=(int(x_center - template_window_size[0]/2) + 7, int(y_center + template_window_size[1] / 2) - 7),
+                fontFace=font,
+                fontScale=font_scale,
+                color=font_color,
+                thickness=thickness,
+                lineType=line_type,
+                text=f'T{x_index*x_regions + y_index + 1}'
+            )
+
+            cv2.putText(
+                img=img,
+                org=(int(x_center - search_window_size[0] / 2 + search_window_size[0] / 3), int(y_center + search_window_size[1] / 2) - 7),
+                fontFace=font,
+                fontScale=font_scale,
+                color=font_color,
+                thickness=thickness,
+                lineType=line_type,
+                text=f'RI{x_index * x_regions + y_index + 1}'
+            )
+
+    return img
+
+
 def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
     prev_img = None
     current_img = None
@@ -77,10 +131,21 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
                     previous_img=prev_img,
                     current_img=current_img,
                     template_window_size=[32, 32],
-                    search_window_size=[64, 64],
-                    x_regions=6,
-                    y_regions=6
+                    search_window_size=[96, 96],
+                    x_regions=4,
+                    y_regions=4
                 )
+
+                img_to_paste = draw_regions(
+                    img=prev_img.copy(),
+                    template_window_size=[32, 32],
+                    search_window_size=[96, 96],
+                    x_regions=4,
+                    y_regions=4
+                )
+
+                cv2.imshow('search and template windows', img_to_paste)
+                cv2.waitKey(0)
 
                 vectors = calculate_optical_flow(kp_curr, kp_prev)
                 a, phi = calculate_of_parameters(vectors)
