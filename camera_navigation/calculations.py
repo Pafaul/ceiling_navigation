@@ -49,7 +49,7 @@ def get_abs_diff_mat(R1: np.ndarray, R2: np.ndarray) -> float:
 
 
 def fix_r(r: np.ndarray):
-    res_r = np.zeros([3, 1])
+    res_r = np.zeros([3, 3])
     eps = 0.001
     if abs(1 - r[0][0]) < eps:
         res_r = calculate_rotation_matrix(0, 0, math.atan2(r[1, 0], r[0, 0]))
@@ -141,6 +141,30 @@ def px_to_obj(
     return kp_obj
 
 
+def px_to_obj_2(
+        keypoints: np.int32,
+        r: np.ndarray,
+        position: np.ndarray,
+        camera_matrix: np.ndarray,
+        h: float
+):
+    u0, v0 = camera_matrix[0, 2], camera_matrix[1, 2]
+    fx, fy = camera_matrix[0, 0], camera_matrix[1, 1]
+    keypoints_obj = []
+    for kp in list(keypoints):
+        keypoint_position = np.zeros([3, 1])
+        keypoint_position[2] = h
+        nom_x = r[0, 0] * (kp[0] - u0) + r[0, 1] * (kp[1] - v0) - r[0, 2] * fx
+        nom_y = r[1, 0] * (kp[0] - u0) + r[1, 1] * (kp[1] - v0) - r[1, 2] * fy
+        denom_x = r[2, 0] * (kp[0] - u0) + r[2, 1] * (kp[1] - v0) - r[2, 2] * fx
+        denom_y = r[2, 0] * (kp[0] - u0) + r[2, 1] * (kp[1] - v0) - r[2, 2] * fy
+        keypoint_position[0] = keypoint_position[2] * nom_x / denom_x
+        keypoint_position[1] = keypoint_position[2] * nom_y / denom_y
+        keypoints_obj.append(keypoint_position.copy())
+
+    return keypoints_obj
+
+
 def lsm(A, B):
     return np.dot(np.dot(np.linalg.inv(np.dot(A.transpose(), A)), A.transpose()), B)
 
@@ -175,6 +199,34 @@ def prepare_data_for_lsm(keypoints_obj: list, px_keypoints: list, r: np.ndarray,
     return coefficients
 
 
+def prepare_data_for_lsm_2(
+    keypoints: np.int32,
+    keypoints_obj: list,
+    r: np.ndarray,
+    camera_matrix: np.ndarray,
+    h: float
+):
+    coefficients = []
+    u0, v0 = camera_matrix[0, 2], camera_matrix[1, 2]
+    fx, fy = camera_matrix[0, 0], camera_matrix[1, 1]
+    for index in range(len(keypoints_obj)):
+        cx1 = (u0 - keypoints[index][0])
+        cy1 = (v0 - keypoints[index][1])
+        a1 = cx1 * r[0, 2] - fx * r[0, 0]
+        a2 = cx1 * r[1, 2] - fx * r[1, 0]
+        a3 = cx1 * r[2, 2] - fx * r[2, 0]
+        b1 = cy1 * r[0, 2] - fy * r[0, 1]
+        b2 = cy1 * r[1, 2] - fy * r[1, 1]
+        b3 = cy1 * r[2, 2] - fy * r[2, 1]
+        cx2 = keypoints_obj[index][0] * a1 + keypoints_obj[index][1] * a2 + keypoints_obj[index][2] * a3
+        cy2 = keypoints_obj[index][0] * b1 + keypoints_obj[index][1] * b2 + keypoints_obj[index][2] * b3
+        coefficients.append(
+            [a1, a2, a3, cx2, b1, b2, b3, cy2]
+        )
+
+    return coefficients
+
+
 def construct_matrices_lsm(all_coefficients):
     A = np.ndarray([len(all_coefficients) * 2, 2])
     B = np.ndarray([len(all_coefficients) * 2, 1])
@@ -185,6 +237,22 @@ def construct_matrices_lsm(all_coefficients):
         A[index*2+1, 0] = coefficients[3]
         A[index*2+1, 1] = coefficients[4]
         B[index*2+1, 0] = coefficients[5]
+
+    return A, B
+
+
+def construct_matrices_lsm_2(coefficients: list):
+    A = np.ndarray([len(coefficients) * 2, 3])
+    B = np.ndarray([len(coefficients) * 2, 1])
+    for (c, i) in zip(coefficients, range(len(coefficients))):
+        A[i * 2, 0] = c[0]
+        A[i * 2, 1] = c[1]
+        A[i * 2, 2] = c[2]
+        B[i * 2, 0] = c[3]
+        A[i * 2 + 1, 0] = c[4]
+        A[i * 2 + 1, 1] = c[5]
+        A[i * 2 + 1, 2] = c[6]
+        B[i * 2 + 1, 0] = c[7]
 
     return A, B
 

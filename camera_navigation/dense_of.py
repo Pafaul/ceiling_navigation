@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from camera_navigation.calculations import calculate_optical_flow, calculate_obj_rotation_matrix, calculate_angles, \
-    filter_optical_flow, calculate_of_parameters
+    filter_optical_flow, calculate_of_parameters, px_to_obj, prepare_data_for_lsm, construct_matrices_lsm, lsm, \
+    px_to_obj_2, prepare_data_for_lsm_2, construct_matrices_lsm_2
 from camera_navigation.plot import DynamicPlotUpdate
 from camera_navigation.video_sources import BasicVideoSource
 from camera_navigation.visualization import optical_flow_visualization
@@ -108,22 +109,30 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
     r = np.eye(3)
     plt.ion()
 
+    camera_height = 1.2
+
+    final_position = np.zeros([3, 1])
+    x_pos, y_pos = [], []
+
     of_plot_orig = DynamicPlotUpdate(subplots=2, marker_type='o')
     of_plot_filtered = DynamicPlotUpdate(subplots=2, marker_type='o')
     angle_plots = DynamicPlotUpdate(subplots=3, marker_type='-')
+    position_plot = DynamicPlotUpdate(subplots=2, marker_type='-')
 
     wx = []
     wy = []
     wz = []
+
+    frame_skipped = False
 
     for (result, frame) in video_source.get_frame():
         if result:
             h, w = frame.shape[:2]
             frame = cv2.resize(frame, (1080, 720)) # (int(w / 1.5), int(h / 1.5)))
             grayscale_img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            if current_img is not None:
+            if current_img is not None and not frame_skipped:
                 prev_img = current_img.copy()
-
+            frame_skipped = False
             current_img = grayscale_img.copy()
 
             if current_img is not None and prev_img is not None:
@@ -131,21 +140,21 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
                     previous_img=prev_img,
                     current_img=current_img,
                     template_window_size=[32, 32],
-                    search_window_size=[96, 96],
-                    x_regions=4,
-                    y_regions=4
+                    search_window_size=[64, 64],
+                    x_regions=5,
+                    y_regions=5
                 )
 
                 img_to_paste = draw_regions(
                     img=prev_img.copy(),
                     template_window_size=[32, 32],
-                    search_window_size=[96, 96],
-                    x_regions=4,
-                    y_regions=4
+                    search_window_size=[64, 64],
+                    x_regions=5,
+                    y_regions=5
                 )
 
                 cv2.imshow('search and template windows', img_to_paste)
-                cv2.waitKey(0)
+                cv2.waitKey(1)
 
                 vectors = calculate_optical_flow(kp_curr, kp_prev)
                 a, phi = calculate_of_parameters(vectors)
@@ -153,6 +162,10 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
                     [list(range(len(a))), a],
                     [list(range(len(phi))), phi]
                 ])
+                mean_a = sum(a) / len(a)
+                if mean_a < 10:
+                    frame_skipped = True
+                    continue
 
                 res_mask, res_of = filter_optical_flow(vectors)
 
@@ -179,6 +192,14 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
                     cv2.imshow('of', of_img)
                     cv2.waitKey(1)
 
+                    obj_points = px_to_obj_2(
+                        keypoints=kp_prev,
+                        r=r,
+                        position=final_position,
+                        camera_matrix=camera_matrix,
+                        h=camera_height
+                    )
+
                     tmp_r = calculate_obj_rotation_matrix(
                         current_kp=kp_curr,
                         previous_kp=kp_prev,
@@ -186,6 +207,28 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
                         rotation_matrix=r
                     )
                     r = tmp_r.copy()
+
+                    coefficients = prepare_data_for_lsm_2(
+                        keypoints=kp_curr,
+                        keypoints_obj=obj_points,
+                        r=r,
+                        camera_matrix=camera_matrix,
+                        h=camera_height
+                    )
+
+                    A, B = construct_matrices_lsm_2(coefficients)
+
+                    X = lsm(A, B)
+
+                    final_position -= X
+                    print(f'pos: {list(final_position)}')
+                    x_pos.append(float(final_position[0]))
+                    y_pos.append(float(final_position[1]))
+
+                    position_plot.update_data([
+                        [x_pos, y_pos],
+                        [[1, 1], [2, 1]]
+                    ])
 
                     calculated_angles = calculate_angles(r)
                     wx.append(calculated_angles[0])
@@ -201,6 +244,9 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
                 else:
                     current_img = None
                     prev_img = None
+        else:
+            cv2.imshow('exit', prev_img)
+            cv2.waitKey(0)
 
     plt.ioff()
 

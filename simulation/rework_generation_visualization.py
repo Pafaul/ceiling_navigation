@@ -16,7 +16,7 @@ from simulation.vizualize_keypoints import draw_keypoints_on_img, show_image, dr
 
 
 def get_processes_pool(iterations: int):
-    cpu_count = multiprocessing.cpu_count()
+    cpu_count = multiprocessing.cpu_count() - 2
     processes_to_use = min(
         cpu_count,
         iterations

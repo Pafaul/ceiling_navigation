@@ -3,6 +3,7 @@ import math
 import cv2
 
 from simulation.camera import Camera
+from simulation.rotation_matrix import calculate_rotation_matrix
 
 
 def get_keypoints_both_pictures(all_kp: list, kp1: list, kp2: list, mask1: list, mask2: list) -> (list, list, list):
@@ -40,6 +41,18 @@ def calculate_angles(R: np.ndarray) -> list:
     ]
 
 
+def fix_r(r: np.ndarray):
+    res_r = np.zeros([3, 3])
+    eps = 0.001
+    if abs(1 - r[0][0]) < eps:
+        res_r = calculate_rotation_matrix(0, 0, math.atan2(r[1, 0], r[0, 0]))
+    elif abs(-1 - r[0, 0]) < eps:
+        res_r = calculate_rotation_matrix(0, 0, math.atan2(r[1, 0], r[0, 0]))
+    else:
+        res_r = r.copy()
+    return res_r
+
+
 def calculate_obj_rotation_matrix(
         previous_kp: np.int32,
         current_kp: np.int32,
@@ -48,13 +61,12 @@ def calculate_obj_rotation_matrix(
 ):
     E, mask = cv2.findEssentialMat(previous_kp, current_kp, camera.internal_matrix, method=cv2.LMEDS, threshold=0.1)
     R1, R2, t = cv2.decomposeEssentialMat(E)
+    # R1 = fix_r(R1)
+    # R2 = fix_r(R2)
     tmp_rotation_matrix_1 = np.dot(R1, rotation_matrix)
     tmp_rotation_matrix_2 = np.dot(R2, rotation_matrix)
-    # print(f'angles1: {calculate_angles(tmp_rotation_matrix_1)}, angles2: {calculate_angles(tmp_rotation_matrix_2)}')
     delta1 = get_abs_diff_mat(tmp_rotation_matrix_1, rotation_matrix)
     delta2 = get_abs_diff_mat(tmp_rotation_matrix_2, rotation_matrix)
-
-    # print(f'delta1: {1}, delta2: {2}', delta1, delta2)
 
     if delta1 < delta2:
         rotation_matrix = tmp_rotation_matrix_1.copy()
@@ -62,6 +74,30 @@ def calculate_obj_rotation_matrix(
         rotation_matrix = tmp_rotation_matrix_2.copy()
 
     return rotation_matrix
+
+
+# def calculate_obj_rotation_matrix(
+#         previous_kp: np.int32,
+#         current_kp: np.int32,
+#         camera: Camera,
+#         rotation_matrix: np.ndarray
+# ):
+#     E, mask = cv2.findEssentialMat(previous_kp, current_kp, camera.internal_matrix, method=cv2.LMEDS, threshold=0.1)
+#     R1, R2, t = cv2.decomposeEssentialMat(E)
+#     tmp_rotation_matrix_1 = np.dot(R1, rotation_matrix)
+#     tmp_rotation_matrix_2 = np.dot(R2, rotation_matrix)
+#     # print(f'angles1: {calculate_angles(tmp_rotation_matrix_1)}, angles2: {calculate_angles(tmp_rotation_matrix_2)}')
+#     delta1 = get_abs_diff_mat(tmp_rotation_matrix_1, rotation_matrix)
+#     delta2 = get_abs_diff_mat(tmp_rotation_matrix_2, rotation_matrix)
+#
+#     # print(f'delta1: {1}, delta2: {2}', delta1, delta2)
+#
+#     if delta1 < delta2:
+#         rotation_matrix = tmp_rotation_matrix_1.copy()
+#     else:
+#         rotation_matrix = tmp_rotation_matrix_2.copy()
+#
+#     return rotation_matrix
 
 
 def calculate_angles_delta(real_angles, angles) -> list:
