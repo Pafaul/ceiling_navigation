@@ -50,7 +50,7 @@ def get_abs_diff_mat(R1: np.ndarray, R2: np.ndarray) -> float:
 
 def fix_r(r: np.ndarray):
     res_r = np.zeros([3, 3])
-    eps = 0.001
+    eps = 0
     if abs(1 - r[0][0]) < eps:
         res_r = calculate_rotation_matrix(0, 0, math.atan2(r[1, 0], r[0, 0]))
     elif abs(-1 - r[0, 0]) < eps:

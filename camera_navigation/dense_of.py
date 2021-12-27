@@ -1,3 +1,5 @@
+import time
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,8 +41,8 @@ def dense_optical_flow(
 
             res = cv2.matchTemplate(search_region, template_img, cv2.TM_CCORR_NORMED)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-            kp_x = x_center + int(max_loc[0] - search_window_size[0] / 2)
-            kp_y = y_center + int(max_loc[1] - search_window_size[1] / 2)
+            kp_x = x_center + int(max_loc[0] - int(res.shape[0] / 2))
+            kp_y = y_center + int(max_loc[1] - int(res.shape[1] / 2))
             of_curr.append((kp_x, kp_y))
 
     of_prev = np.int32(of_prev)
@@ -114,19 +116,18 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
     final_position = np.zeros([3, 1])
     x_pos, y_pos = [], []
 
-    of_plot_orig = DynamicPlotUpdate(subplots=2, marker_type='o')
-    of_plot_filtered = DynamicPlotUpdate(subplots=2, marker_type='o')
-    angle_plots = DynamicPlotUpdate(subplots=3, marker_type='-')
-    position_plot = DynamicPlotUpdate(subplots=2, marker_type='-')
-
     wx = []
     wy = []
     wz = []
 
     frame_skipped = False
+    frame_num = 0
 
+    start_time = time.time()
     for (result, frame) in video_source.get_frame():
         if result:
+            frame_num += 1
+            print(frame_num)
             h, w = frame.shape[:2]
             frame = cv2.resize(frame, (1080, 720)) # (int(w / 1.5), int(h / 1.5)))
             grayscale_img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -139,31 +140,17 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
                 kp_prev, kp_curr = dense_optical_flow(
                     previous_img=prev_img,
                     current_img=current_img,
-                    template_window_size=[32, 32],
-                    search_window_size=[64, 64],
-                    x_regions=5,
-                    y_regions=5
+                    template_window_size=[50, 50],
+                    search_window_size=[96, 96],
+                    x_regions=7,
+                    y_regions=6
                 )
-
-                img_to_paste = draw_regions(
-                    img=prev_img.copy(),
-                    template_window_size=[32, 32],
-                    search_window_size=[64, 64],
-                    x_regions=5,
-                    y_regions=5
-                )
-
-                cv2.imshow('search and template windows', img_to_paste)
-                cv2.waitKey(1)
 
                 vectors = calculate_optical_flow(kp_curr, kp_prev)
                 a, phi = calculate_of_parameters(vectors)
-                of_plot_orig.update_data([
-                    [list(range(len(a))), a],
-                    [list(range(len(phi))), phi]
-                ])
+
                 mean_a = sum(a) / len(a)
-                if mean_a < 10:
+                if mean_a < 5:
                     frame_skipped = True
                     continue
 
@@ -181,17 +168,6 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
                 kp_prev = np.int32(tmp_kp_prev)
 
                 if len(res_of) > 8:
-                    a, phi = calculate_of_parameters(res_of)
-                    of_plot_filtered.update_data([
-                        [list(range(len(a))), a],
-                        [list(range(len(phi))), phi]
-                    ])
-
-                    of_img = optical_flow_visualization(prev_img, kp_prev, res_of)
-                    of_img = draw_kp(of_img, kp_curr)
-                    cv2.imshow('of', of_img)
-                    cv2.waitKey(1)
-
                     obj_points = px_to_obj_2(
                         keypoints=kp_prev,
                         r=r,
@@ -220,35 +196,68 @@ def dense_of_loop(video_source: BasicVideoSource, camera_matrix: np.ndarray):
 
                     X = lsm(A, B)
 
-                    final_position -= X
+                    X_tmp = [float(X[i][0]) if abs(float(X[i][0])) > 0.01 else 0 for i in range(3)]
+                    X[0] = X_tmp[0]
+                    X[1] = X_tmp[1]
+                    X[2] = X_tmp[2]
+
+                    final_position += X
                     print(f'pos: {list(final_position)}')
                     x_pos.append(float(final_position[0]))
                     y_pos.append(float(final_position[1]))
-
-                    position_plot.update_data([
-                        [x_pos, y_pos],
-                        [[1, 1], [2, 1]]
-                    ])
 
                     calculated_angles = calculate_angles(r)
                     wx.append(calculated_angles[0])
                     wy.append(calculated_angles[1])
                     wz.append(calculated_angles[2])
                     print(f'angles: {calculated_angles}')
-
-                    angle_plots.update_data([
-                        [list(range(len(wx))), wx],
-                        [list(range(len(wy))), wy],
-                        [list(range(len(wz))), wz],
-                    ])
                 else:
                     current_img = None
                     prev_img = None
         else:
-            cv2.imshow('exit', prev_img)
-            cv2.waitKey(0)
+            break
+
+    finish_time = time.time()
+    fps = frame_num/(finish_time - start_time)
+    print(f'fps: {fps}')
 
     plt.ioff()
+    fig, ax = plt.subplots()
+    ax.plot(x_pos, y_pos, linewidth=4.0)
+    ax.grid()
+    plt.xlabel('Смещение по оси X, м')
+    plt.ylabel('Смещение по оси Y, м')
+    plt.show()
+    #
+    print(f'fin pos: {x_pos[-1]}, {y_pos[-1]}')
+    #
+    fig, ax = plt.subplots()
+    ax.plot(list(range(len(wx))), wx, linewidth=4.0)
+    ax.grid()
+    plt.xlabel('Номер кадра')
+    plt.ylabel('Рассчитанное значение угла wx, градусы')
+    plt.show()
+    print(f'fin wx: {wx[-1]}')
+    wx = [abs(w) for w in wx]
+    print(f'max wx: {max(wx)}')
+    #
+    fig, ax = plt.subplots()
+    ax.plot(list(range(len(wy))), wy, linewidth=4.0)
+    ax.grid()
+    plt.xlabel('Номер кадра')
+    plt.ylabel('Рассчитанное значение угла wy, градусы')
+    plt.show()
+    print(f'fin wy: {wy[-1]}')
+    wy = [abs(w) for w in wy]
+    print(f'max wy: {max(wy)}')
+    #
+    fig, ax = plt.subplots()
+    ax.plot(list(range(len(wz))), wz, linewidth=4.0)
+    ax.grid()
+    plt.xlabel('Номер кадра')
+    plt.ylabel('Рассчитанное значение угла wz, градусы')
+    plt.show()
+    print(f'fin wz: {wz[-1]}')
 
 
 def draw_kp(img: np.ndarray, kp):

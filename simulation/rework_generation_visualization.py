@@ -49,48 +49,80 @@ def px_to_obj(keypoints: list, mask: list, position: np.ndarray, camera: Camera,
 
 
 def prepare_data_for_lms(keypoints_obj: list, px_keypoints: list, mask: list, r: np.ndarray,
-                         z: float, f: float, px_mm: list, resolution: list):
+                         z: float, f: float, px_mm: list, resolution: list, camera: Camera):
     coefficients = []
-    u = resolution[0] / 2 * px_mm[0]
-    v = resolution[1] / 2 * px_mm[1]
+    u0, v0 = camera.internal_matrix[0, 2], camera.internal_matrix[1, 2]
+    fx, fy = camera.internal_matrix[0, 0], camera.internal_matrix[1, 1]
     for (kp_obj, kp_px, visible) in zip(keypoints_obj, px_keypoints, mask):
         if visible:
-            cx1 = (u - kp_px[0] * px_mm[0]) / f
-            cy1 = (v - kp_px[1] * px_mm[1]) / f
-            cx2 = \
-                kp_obj[0] * (r[0, 0] - r[0, 2] * cx1) + \
-                kp_obj[1] * (r[1, 0] - r[1, 2] * cx1) + \
-                kp_obj[2] * (r[2, 0] - r[2, 2] * cx1) - \
-                z * (r[2, 0] - r[2, 2] * cx1)
-            cy2 = \
-                kp_obj[0] * (r[0, 1] - r[0, 2] * cy1) + \
-                kp_obj[1] * (r[1, 1] - r[1, 2] * cy1) + \
-                kp_obj[2] * (r[2, 1] - r[2, 2] * cy1) - \
-                z * (r[2, 1] - r[2, 2] * cy1)
+            cx1 = (u0 - kp_px[0])
+            cy1 = (v0 - kp_px[1])
+            a1 = cx1 * r[0, 2] - fx * r[0, 0]
+            a2 = cx1 * r[1, 2] - fx * r[1, 0]
+            a3 = cx1 * r[2, 2] - fx * r[2, 0]
+            b1 = cy1 * r[0, 2] - fy * r[0, 1]
+            b2 = cy1 * r[1, 2] - fy * r[1, 1]
+            b3 = cy1 * r[2, 2] - fy * r[2, 1]
+            cx2 = kp_obj[0] * a1 + kp_obj[1] * a2 + kp_obj[2] * a3
+            cy2 = kp_obj[0] * b1 + kp_obj[1] * b2 + kp_obj[2] * b3
+            coefficients.append(
+                [a1, a2, a3, cx2, b1, b2, b3, cy2]
+            )
 
-            a = r[0, 0] - r[0, 2] * cx1
-            b = r[1, 0] - r[1, 2] * cx1
-            d = r[0, 1] - r[0, 2] * cy1
-            e = r[1, 1] - r[1, 2] * cy1
-            coefficients.append((
-                a, b, cx2, d, e, cy2
-            ))
-        else:
-            pass
-            # coefficients.append(tuple([0]*6))
     return coefficients
+    # coefficients = []
+    # u = resolution[0] / 2 * px_mm[0]
+    # v = resolution[1] / 2 * px_mm[1]
+    # for (kp_obj, kp_px, visible) in zip(keypoints_obj, px_keypoints, mask):
+    #     if visible:
+    #         cx1 = (u - kp_px[0] * px_mm[0]) / f
+    #         cy1 = (v - kp_px[1] * px_mm[1]) / f
+    #         cx2 = \
+    #             kp_obj[0] * (r[0, 0] - r[0, 2] * cx1) + \
+    #             kp_obj[1] * (r[1, 0] - r[1, 2] * cx1) + \
+    #             kp_obj[2] * (r[2, 0] - r[2, 2] * cx1) - \
+    #             z * (r[2, 0] - r[2, 2] * cx1)
+    #         cy2 = \
+    #             kp_obj[0] * (r[0, 1] - r[0, 2] * cy1) + \
+    #             kp_obj[1] * (r[1, 1] - r[1, 2] * cy1) + \
+    #             kp_obj[2] * (r[2, 1] - r[2, 2] * cy1) - \
+    #             z * (r[2, 1] - r[2, 2] * cy1)
+    #
+    #         a = r[0, 0] - r[0, 2] * cx1
+    #         b = r[1, 0] - r[1, 2] * cx1
+    #         d = r[0, 1] - r[0, 2] * cy1
+    #         e = r[1, 1] - r[1, 2] * cy1
+    #         coefficients.append((
+    #             a, b, cx2, d, e, cy2
+    #         ))
+    #     else:
+    #         pass
+    #         # coefficients.append(tuple([0]*6))
+    # return coefficients
 
 
 def construct_matrices_lsm(all_coefficients):
-    A = np.ndarray([len(all_coefficients) * 2, 2])
+    # A = np.ndarray([len(all_coefficients) * 2, 2])
+    # B = np.ndarray([len(all_coefficients) * 2, 1])
+    # for (coefficients, index) in zip(all_coefficients, range(len(all_coefficients))):
+    #     A[index*2, 0] = coefficients[0]
+    #     A[index*2, 1] = coefficients[1]
+    #     B[index*2, 0] = coefficients[2]
+    #     A[index*2+1, 0] = coefficients[3]
+    #     A[index*2+1, 1] = coefficients[4]
+    #     B[index*2+1, 0] = coefficients[5]
+
+    A = np.ndarray([len(all_coefficients) * 2, 3])
     B = np.ndarray([len(all_coefficients) * 2, 1])
-    for (coefficients, index) in zip(all_coefficients, range(len(all_coefficients))):
-        A[index*2, 0] = coefficients[0]
-        A[index*2, 1] = coefficients[1]
-        B[index*2, 0] = coefficients[2]
-        A[index*2+1, 0] = coefficients[3]
-        A[index*2+1, 1] = coefficients[4]
-        B[index*2+1, 0] = coefficients[5]
+    for (c, i) in zip(all_coefficients, range(len(all_coefficients))):
+        A[i * 2, 0] = c[0]
+        A[i * 2, 1] = c[1]
+        A[i * 2, 2] = c[2]
+        B[i * 2, 0] = c[3]
+        A[i * 2 + 1, 0] = c[4]
+        A[i * 2 + 1, 1] = c[5]
+        A[i * 2 + 1, 2] = c[6]
+        B[i * 2 + 1, 0] = c[7]
 
     return A, B
 
@@ -156,6 +188,18 @@ def run_simulation(
             current_mask, previous_mask
         )
 
+        data_for_lms = prepare_data_for_lms(
+            keypoints_obj=current_obj_keypoints,
+            px_keypoints=current_kp,
+            mask=mask_both_pics,
+            r=r,
+            z=camera.position[2],
+            f=camera.f,
+            px_mm=camera.px_mm,
+            resolution=camera.resolution,
+            camera=camera
+        )
+
         r = calculate_obj_rotation_matrix(
             previous_kp=prev_img_kp,
             current_kp=current_img_kp,
@@ -163,20 +207,10 @@ def run_simulation(
             rotation_matrix=r
         )
 
-        data_for_lms = prepare_data_for_lms(
-            keypoints_obj=current_obj_keypoints,
-            px_keypoints=current_kp,
-            mask=mask_both_pics,
-            r=np.dot(camera.ufo_r_to_camera, r),
-            z=camera.position[2],
-            f=camera.f,
-            px_mm=camera.px_mm,
-            resolution=camera.resolution
-        )
-
         A, B = construct_matrices_lsm(data_for_lms)
 
         X = lsm(A, B)
+        # X[1] = X[1] - int(X[1])
 
         position[2] = camera.position[2]
 
@@ -185,7 +219,7 @@ def run_simulation(
             mask=current_mask,
             position=position,
             camera=camera,
-            rotation_matrix=np.dot(camera.ufo_r_to_camera, r)
+            rotation_matrix=r
         )
 
         if visualization_config['visualization_enabled']:
@@ -198,7 +232,8 @@ def run_simulation(
 
         angles.append(calculate_angles(r))
         tmp_position = np.zeros([3, 1])
-        total = total + X
+        total[0] = total[0] + X[0]
+        total[1] = total[1] + X[1]
         tmp_position[0] = total[0]
         tmp_position[1] = total[1]
         tmp_position[2] = camera.position[2]

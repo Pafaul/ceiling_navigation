@@ -37,8 +37,8 @@ def show_plots(real_angles, angles, plot_config, simulation_config, movement):
 
     plt.figure(figsize=fig_size, dpi=dpi)
     plt.grid(True)
-    plt.plot([angle[0] for angle in real_angles], 'b')
-    plt.plot([-angle[0] for angle in angles], 'r')
+    plt.plot([angle[0] for angle in real_angles], 'b', linewidth=3)
+    plt.plot([-angle[0] for angle in angles], 'r', linewidth=3)
     plt.xlabel('Итерация')
     plt.ylabel('Угол, градусы')
     plt.legend(handles=[blue_patch, red_patch], loc='upper right')
@@ -56,8 +56,8 @@ def show_plots(real_angles, angles, plot_config, simulation_config, movement):
 
     plt.figure(figsize=fig_size, dpi=dpi)
     plt.grid(True)
-    plt.plot([angle[1] for angle in real_angles], 'b')
-    plt.plot([-angle[1] for angle in angles], 'g')
+    plt.plot([angle[1] for angle in real_angles], 'b', linewidth=3)
+    plt.plot([-angle[1] for angle in angles], 'g', linewidth=3)
     plt.xlabel('Итерация')
     plt.ylabel('Угол, градусы')
     plt.legend(handles=[blue_patch, green_patch], loc='upper right')
@@ -75,8 +75,8 @@ def show_plots(real_angles, angles, plot_config, simulation_config, movement):
 
     plt.figure(figsize=fig_size, dpi=dpi)
     plt.grid(True)
-    plt.plot([angle[2] for angle in real_angles], 'b')
-    plt.plot([angle[2] for angle in angles], 'purple')
+    plt.plot([angle[2] for angle in real_angles], 'b', linewidth=3)
+    plt.plot([angle[2] for angle in angles], 'purple', linewidth=3)
     plt.xlabel('Итерация')
     plt.ylabel('Угол, градусы')
     plt.legend(handles=[blue_patch, purple_patch], loc='upper right')
@@ -96,11 +96,14 @@ def show_plots(real_angles, angles, plot_config, simulation_config, movement):
     green_patch = mpatches.Patch(color='green', label='Ошибка wy')
     purple_patch = mpatches.Patch(color='purple', label='Ошибка wz')
 
+    dx = [real_angle[0] + angle[0] for (real_angle, angle) in zip(real_angles, angles)]
+    dy = [real_angle[1] + angle[1] for (real_angle, angle) in zip(real_angles, angles)]
+    dz = [real_angle[2] - angle[2] for (real_angle, angle) in zip(real_angles, angles)]
     plt.figure(figsize=fig_size, dpi=dpi)
     plt.grid(True)
-    plt.plot([real_angle[0] + angle[0] for (real_angle, angle) in zip(real_angles, angles)], 'r')
-    plt.plot([real_angle[1] + angle[1] for (real_angle, angle) in zip(real_angles, angles)], 'g')
-    plt.plot([real_angle[2] - angle[2] for (real_angle, angle) in zip(real_angles, angles)], 'purple')
+    plt.plot(dx, 'r', linewidth=3)
+    plt.plot(dy, 'g', linewidth=3)
+    plt.plot(dz, 'purple', linewidth=3)
     plt.xlabel('Итерация')
     plt.ylabel('Ошибка определения угла, градусы')
     plt.legend(handles=[red_patch, green_patch, purple_patch], loc='upper right')
@@ -115,6 +118,15 @@ def show_plots(real_angles, angles, plot_config, simulation_config, movement):
     )
     if plot_config['show_plots']:
         plt.show()
+
+    print(f'angles fin: ({[angle[0] for angle in angles][-1]}, '
+          f'{[angle[1] for angle in angles][-1]}, '
+          f'{[angle[2] for angle in angles][-1]})')
+    print(f'angles delta: ({dx[-1]}, {dy[-1]}, {dz[-1]})')
+    dx = [abs(d) for d in dx]
+    dy = [abs(d) for d in dy]
+    dz = [abs(d) for d in dz]
+    print(f'max delta: ({max(dx)}, {max(dy)}, {max(dz)})')
 
 
 def show_plots_height(heights, deltas, simulation_config, movement, plot_config):
@@ -151,12 +163,58 @@ def show_plots_height(heights, deltas, simulation_config, movement, plot_config)
             [str(round(float(w) * 180 / math.pi)) for w in movement.rotation_deltas[0]])
         file_name_movement = 'linear_' + '_'.join(file_name_movement)
 
+    axis_value = ['x', 'y', 'z']
+    for axis_index in range(0, 3):
+        mean = []
+        std = []
+        heights_val = []
+        for index in range(0, int(len(heights)/100)):
+            mean.append(np.mean([delta[axis_index] for delta in deltas][index*100: (index+1)*100]))
+            std.append(np.std([delta[axis_index] for delta in deltas][index*100: (index+1)*100]))
+            heights_val.append(f'{(index+1)*100}')
+
+        mean_file_template = '{0}/w{1}_{2}_{3}_{4}_mean.png'
+        plt.figure(figsize=fig_size, dpi=dpi)
+        plt.grid(True)
+        plt.plot(heights_val, mean, linewidth=3)
+        plt.xlabel('Высоты, м')
+        plt.ylabel(f'Среднее значение ошибки угла w{axis_value[axis_index]}, градусы')
+        plt.savefig(
+            mean_file_template.format(
+                plot_config['plot_dir'],
+                axis_value[axis_index],
+                simulation_config['type'],
+                movement.movement_points,
+                file_name_movement
+            ),
+            bbox_inches='tight'
+        )
+        plt.show()
+
+        std_file_template = '{0}/w{1}_{2}_{3}_{4}_std.png'
+        plt.figure(figsize=fig_size, dpi=dpi)
+        plt.grid(True)
+        plt.plot(heights_val, std, linewidth=3)
+        plt.xlabel('Высоты, м')
+        plt.ylabel(f'Значение СКО ошибки угла w{axis_value[axis_index]}, градусы')
+        plt.savefig(
+            std_file_template.format(
+                plot_config['plot_dir'],
+                axis_value[axis_index],
+                simulation_config['type'],
+                movement.movement_points,
+                file_name_movement
+            ),
+            bbox_inches='tight'
+        )
+        plt.show()
+
     for (index, file_name_template, patch, color) in zip(
             list(range(len(file_templates))), file_templates, patches, colors
     ):
         plt.figure(figsize=fig_size, dpi=dpi)
         plt.grid(True)
-        plt.plot(heights, [delta[index] for delta in deltas], color)
+        plt.plot(heights, [delta[index] for delta in deltas], color, linewidth=3)
         plt.xlabel('Высота, м')
         plt.ylabel('Ошибка, градусы')
         plt.legend(handles=[patch], loc='upper right')
@@ -207,12 +265,59 @@ def show_plots_resolution(resolutions, deltas, simulation_config, movement, plot
             [str(round(float(w) * 180 / math.pi)) for w in movement.rotation_deltas[0]])
         file_name_movement = 'linear_' + '_'.join(file_name_movement)
 
+    axis_value = ['x', 'y', 'z']
+    res_ = [res[0] for res in resolutions]
+    for axis_index in range(0, 3):
+        mean = []
+        std = []
+        heights_val = []
+        for index in range(0, int(len(res_) / 100)):
+            mean.append(np.mean([delta[axis_index] for delta in deltas][index * 100: (index + 1) * 100]))
+            std.append(np.std([delta[axis_index] for delta in deltas][index * 100: (index + 1) * 100]))
+            heights_val.append(f'{(index + 1) * 100}')
+
+        mean_file_template = '{0}/w{1}_{2}_{3}_{4}_mean.png'
+        plt.figure(figsize=fig_size, dpi=dpi)
+        plt.grid(True)
+        plt.plot(heights_val, mean, linewidth=3)
+        plt.xlabel('Разрешение, пиксели')
+        plt.ylabel(f'Среднее значение ошибки угла w{axis_value[axis_index]}, градусы')
+        plt.savefig(
+            mean_file_template.format(
+                plot_config['plot_dir'],
+                axis_value[axis_index],
+                simulation_config['type'],
+                movement.movement_points,
+                file_name_movement
+            ),
+            bbox_inches='tight'
+        )
+        plt.show()
+
+        std_file_template = '{0}/w{1}_{2}_{3}_{4}_std.png'
+        plt.figure(figsize=fig_size, dpi=dpi)
+        plt.grid(True)
+        plt.plot(heights_val, std, linewidth=3)
+        plt.xlabel('Разрешение, пиксели')
+        plt.ylabel(f'Значение СКО ошибки w{axis_value[axis_index]}, градусы')
+        plt.savefig(
+            std_file_template.format(
+                plot_config['plot_dir'],
+                axis_value[axis_index],
+                simulation_config['type'],
+                movement.movement_points,
+                file_name_movement
+            ),
+            bbox_inches='tight'
+        )
+        plt.show()
+
     for (index, file_name_template, patch, color) in zip(
             list(range(len(file_templates))), file_templates, patches, colors
     ):
         plt.figure(figsize=fig_size, dpi=dpi)
         plt.grid(True)
-        plt.plot([res[0] for res in resolutions], [delta[index] for delta in deltas], color)
+        plt.plot([res[0] for res in resolutions], [delta[index] for delta in deltas], color, linewidth=3)
         plt.xlabel('Разрешение, пиксели')
         plt.ylabel('Ошибка, градусы')
         plt.legend(handles=[patch], loc='upper right')
@@ -230,6 +335,14 @@ def show_plots_resolution(resolutions, deltas, simulation_config, movement, plot
 
 
 def show_plots_position(initial_position, real_positions, calculated_positions, movement, plot_config, simulation_config):
+    def get_axe_name(_index):
+        if _index == 0:
+            return 'X'
+        if _index == 1:
+            return 'Y'
+        if _index == 2:
+            return 'Z'
+
     red_patch = mpatches.Patch(color='red', label='Изменение положения вдоль оси X')
     green_patch = mpatches.Patch(color='green', label='Изменение положения вдоль оси Y')
     purple_patch = mpatches.Patch(color='purple', label='Изменение положения вдоль оси Z')
@@ -283,10 +396,10 @@ def show_plots_position(initial_position, real_positions, calculated_positions, 
     for (index, patch, color, file_name_template) in zip(range(3), patches, colors, file_templates):
         plt.figure(figsize=fig_size, dpi=dpi)
         plt.grid(True)
-        plt.plot([calculated[index] for calculated in calculated_positions], color)
-        plt.plot([real[index] for real in real_centered], 'b')
+        plt.plot([calculated[index] for calculated in calculated_positions], color, linewidth=3)
+        plt.plot([real[index] for real in real_centered], 'b', linewidth=3)
         plt.xlabel('Итерация')
-        plt.ylabel('Изменение положения вдоль оси {0}'.format(index))
+        plt.ylabel('Изменение положения вдоль оси {0}'.format(get_axe_name(index)))
         plt.legend(handles=[patch], loc='upper right')
         plt.savefig(
             file_name_template.format(
@@ -313,9 +426,9 @@ def show_plots_position(initial_position, real_positions, calculated_positions, 
     for (index, patch, color, file_name_template) in zip(range(3), patches, colors, file_templates_delta):
         plt.figure(figsize=fig_size, dpi=dpi)
         plt.grid(True)
-        plt.plot([delta[index] for delta in deltas], color)
+        plt.plot([delta[index] for delta in deltas], color, linewidth=3)
         plt.xlabel('Итерация')
-        plt.ylabel('Отклонения вдоль оси {0}'.format(index))
+        plt.ylabel('Отклонения вдоль оси {0}'.format(get_axe_name(index)))
         plt.legend(handles=[patch], loc='upper right')
         plt.savefig(
             file_name_template.format(
@@ -328,3 +441,6 @@ def show_plots_position(initial_position, real_positions, calculated_positions, 
         )
         if plot_config['show_plots']:
             plt.show()
+
+    print(f'pos: {[calculated[0] for calculated in calculated_positions][-1]}, {[calculated[1] for calculated in calculated_positions][-1]}')
+    print(f'pos delta: {[delta[0] for delta in deltas][-1]}, {[delta[1] for delta in deltas][-1]}')
